@@ -1,0 +1,33 @@
+#---------------------------------------------------------------------------------------------------------
+####### Urban Plumber AU-Preston Main Control File #######
+
+#---------------------------------------------------------------------------------------------------------
+####### INPUTS #######
+site_name=AU-Preston				     # site name (string)
+run_name=AU-Preston                              # run name (string)
+inpt_met_file=/home/kerryn/git/Target-Java.v2/example/AU-Preston/AU-Preston_met.csv	# input meteorolgical file (i.e. forcing file)
+inpt_lc_file=/home/kerryn/git/Target-Java.v2/example/AU-Preston/AU-Preston_LC.csv                       #  input land cover data file
+output_dir=/home/kerryn/git/Target-Java.v2/example/AU-Preston/output/                # directory output will be saved in
+date_fmt=%d/%m/%Y %H:%M                              # format of datetime in input met files
+timestep=1800S                                       # define in seconds 
+include roofs=Y   
+#---------------------------------------------------------------------------------------------------------
+# dates 
+#---------------------------------------------------------------------------------------------------------
+SpinUp=2003,08,06,0					# year,month,day,hour	#start date for simulation (should be a minimum of 24 hours prior to date1)
+StartDate =2003,08,06,0				# year,month,day,hour	## the date/time for period of interest (i.e. before this will not be saved)
+EndDate =2004,11,28,23 					# year,month,day,hour	# end date for validation period
+######################
+
+
+individualNetcdfFiles=false
+mod_ldwn=N             # use modelled ldown
+lat=-37.7306
+domainDim=1,1
+latEdge=-37.7306
+lonEdge=145.0145
+latResolution=.00004294
+lonResolution=.0021849
+### disabled output options are Fid,Utb,TsurfWall,TsurfCan,TsurfHorz,Ucan,Utb,Tsurfwall,TsurfCan,TsurfHorz,Ucan,Pet
+disableOutput=Utb,Ucan,Pet
+
