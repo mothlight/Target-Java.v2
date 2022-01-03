@@ -9,7 +9,9 @@ import java.util.HashMap;
 
 public class TargetModule
 {
-	
+	public static boolean DEBUG=true;
+	public int brokenTBRurConverges = 0;
+	TbRurSolverBisectional solver = new TbRurSolverBisectional();
 	ArrayList<Long> timesteps;
 	// this has ArrayList of timesteps containing HashMap of keys (grid zones, the x,y of the Access file, so 234_234)
 	// then each of these has a HashMap of the weather (TEMPERATURE, RH, P, WS, SW, LW)
@@ -334,8 +336,12 @@ public class TargetModule
 		long spinUpLong = spinUp.getTime();
         // # begin looping through the met forcing data file
 	    for (int i=0;i<numberOfTimesteps;i++)
-        {           
-	    	System.out.println("starting loop " + i );
+        {       
+            if (DEBUG)
+            {
+            	System.out.print("starting loop " + i + " " );
+            }
+	    	
         	double[] metTa0 = new double[numberOfForcingGridZones];
         	double[] metKd0 = new double[numberOfForcingGridZones];
         	double[] metWS0 = new double[numberOfForcingGridZones];
@@ -361,7 +367,11 @@ public class TargetModule
             	// # current timestep 
                 Date dte = new Date(spinUpLong + timedeltaAddition);  
                 Dats.put("dte", dte);
-                System.out.println(dte + " " + i );
+                if (DEBUG)
+                {
+                	 System.out.println(dte + " " + i );
+                }
+               
                 
             	//first iterate through all of the grid zones. If not using Access forcing, then this will just be 1 zone and loading the normal met file
             	// this will be done first to calculate the various fluxes, surfaces, and VFs. 
@@ -560,47 +570,38 @@ public class TargetModule
 	                //###### Solve Richardson's number eq for "high temperature" aka Tb_rur 
 	                double dz = z_Hx2 - z_TaRef ;
 	                dz = Math.max(dz, 0.01);
-	
-	                double javaTbRur=0;
-	
-	                //this is the java version of the convergence. Mostly works but not for every case. 
-	                TbRurSolver tbRurSolverOld = new TbRurSolver();
-	                Tb_rur[zone] = tbRurSolverOld.convergeNewVersion(dz, ref_ta, UTb[zone], mod_U_TaRef, i, Ri_rur);
+	                
+	                // new replacement solver, using a bisectional solver instead of TbRubSolver. 
+	                // If it fails, fall back to Python version, but so far all the cases so far seem to work.
+	                double javaTbRur=0;             
+	                Tb_rur[zone] = solver.bisectionalSolver(dz, ref_ta, UTb[zone], mod_U_TaRef, i, Ri_rur);                       
+	                javaTbRur = Tb_rur[zone];
 	                if (Tb_rur[zone] == TbRurSolver.ERROR_RETURN || Tb_rur[zone] == 0.0)
 	                {
-	                	System.out.println("Error with java Tb_rur, returned value=" + Tb_rur);
-	                	System.out.println("Called with " +i+" "+ dz+" "+ ref_ta+" "+ UTb[zone]+" "+ mod_U_TaRef[i]+" "+ Ri_rur+" ");
-	                	Tb_rur[zone] = Tb_rur_prev;
-	                	System.out.println("using previous Tb_rur=" + Tb_rur_prev);
-	                	
 	                	try
 	                	{
+	                		brokenTBRurConverges++;
 		            		TbRurSolver_python solver = new TbRurSolver_python();
 		            		solver.setWorkingDirectory("/home/kerryn/git/Target_Java/bin");
 		            		double returnValue = solver.converge(i, dz, ref_ta, UTb[zone], mod_U_TaRef[i], Ri_rur);
 		            		System.out.println("Called with i=" +i+" dz="+ dz+" ref_ta="+ ref_ta+" UTb[zone]="+ UTb[zone]+" mod_U_TaRef[i]="+ mod_U_TaRef[i]+" Ri_rur="+ Ri_rur+" ");
-		            		System.out.println("Trying python version=" + returnValue);
-		            		System.out.println(returnValue);
 		            		Tb_rur[zone] = returnValue;
-		                	//System.exit(1);
+		            		System.out.println("  Python=" + Tb_rur[zone] + "  " + brokenTBRurConverges);
+		            		double diff1 = Math.abs( Tb_rur[zone] - javaTbRur);
+		            		if (diff1 > 1E6 )
+		            		{
+		            			System.out.println("Error__________________________");
+		            		}
 	                	}
 	                	catch(Exception e)
 	                	{
 	                		e.printStackTrace();
 	                	}
-
 	                }
-	                else
-	                {
-	//	                	System.out.println("Java Tb_rur=" + "\t" + Tb_rur);
-	                	javaTbRur = Tb_rur[zone];
-	                }
-                        Tb_rur_prev = Tb_rur[zone];	             
-	                Tb_rur[zone] = Tb_rur[zone] - 9.806/1004.67*dz;
-	                tbRurSolverOld = null;
-	    	                
-	                //# always use iterative solution for rural Tb
-	                                
+	                      
+	                Tb_rur[zone] = Tb_rur[zone] - 9.806/1004.67*dz;	                
+              
+	                //# always use iterative solution for rural Tb	                                
 	                //###### Begin calculating modelled variables for 10 different SVF values... 
 	                for (int vf=0;vf<10;vf++)
 	                {
