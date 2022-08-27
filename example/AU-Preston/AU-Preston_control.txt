@@ -5,9 +5,9 @@
 ####### INPUTS #######
 site_name=AU-Preston				     # site name (string)
 run_name=AU-Preston                              # run name (string)
-inpt_met_file=/home/kerryn/git/Target-Java.v2/example/AU-Preston/AU-Preston_met.csv	# input meteorolgical file (i.e. forcing file)
-inpt_lc_file=/home/kerryn/git/Target-Java.v2/example/AU-Preston/AU-Preston_LC.csv                       #  input land cover data file
-output_dir=/home/kerryn/git/Target-Java.v2/example/AU-Preston/output/                # directory output will be saved in
+inpt_met_file=../example/AU-Preston/AU-Preston_met.csv  # input meteorolgical file (i.e. forcing file)
+inpt_lc_file=../example/AU-Preston/AU-Preston_LC.csv                       #  input land cover data file
+output_dir=../example/AU-Preston/output/                # directory output will be saved in
 date_fmt=%d/%m/%Y %H:%M                              # format of datetime in input met files
 timestep=1800S                                       # define in seconds 
 include roofs=Y   
