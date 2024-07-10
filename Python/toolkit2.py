@@ -29,7 +29,7 @@ from confirm import confirm
 ######################################################
 import constants1 as cs     # This is the main constants file where constants are defined. Contains dictionary called cs
 ################## functions used by the code
-from rn_calc_2 import rn_calc   # net radiation calcs  (3.1 tech notes)
+from rn_calc import rn_calc   # net radiation calcs  (3.1 tech notes)
 from LUMPS import LUMPS       # energy balance calcs (3.2 tech notes)
 from force_restore import Ts_calc_surf   # force restore calcs (3.3 tech notes)
 from simple_water import Ts_EB_W     # simple water body model (3.4 tech notes)
@@ -87,7 +87,7 @@ if confirm('This run will be called: '+run) == True:    # prints the run name to
 
     ########## DEFINE INPUT MET FILE LOCATION HERE #######
     met_file = os.path.join('..','input',cfM['site_name'],'MET',cfM['inpt_met_file'])    # input meteorological forcing data file 
-    met_data = pandas.read_csv(met_file,parse_dates=['datetime'], date_parser=dateparse,index_col=['datetime']) # convert to data frame
+    met_data = pandas.read_csv(met_file,parse_dates=['datetime'], date_parser=dateparse,index_col=['datetime']) # convert to data frame'
     met_data_all = met_data.ix[date1A:date2]   # main forcing meteorological dataframe (including spin up)
     met_data_all = met_data_all.interpolate(method='time') # interpolates forcing data 
     if cfM['mod_ldwn'] == 'Y':                                          # model Ldown in data is not available
@@ -120,8 +120,8 @@ if confirm('This run will be called: '+run) == True:    # prints the run name to
             print dte, i 
             for surf in surfs:      # cycle through surface type for current timestep
             #################### radiation balance non-water ###########################
-                if not surf in ['watr','Veg']:
-                    rad  = rn_calc(cs,cfM,met_d,surf,Dats,mod_data_ts_,i)  # creates dictionary with radiation variables for current timestep and surface type                             
+                rad  = rn_calc(cs,cfM,met_d,surf,Dats,mod_data_ts_,i)  # creates dictionary with radiation variables for current timestep and surface type
+                if surf != 'watr':                                  
                     ##################### ENG BALANCE non-water #######################
                     eng_bals=LUMPS(rad,cs,cfM,met_d,surf,Dats,i)            # creates dictionary with energy balance for current timestep and surface type
                     ##################### CALC LST non-water #########################
@@ -133,9 +133,9 @@ if confirm('This run will be called: '+run) == True:    # prints the run name to
                     mod_data_qh_[i][surf] = eng_bals['Qh']
                     mod_data_qe_[i][surf] = eng_bals['Qe']
                     mod_data_qg_[i][surf] = eng_bals['Qg']
-                    mod_data_rn_[i][surf] = rad['Rn']                   
-                if (surf == 'watr'):
-                    rad  = rn_calc(cs,cfM,met_d,surf,Dats,mod_data_ts_,i)  # creates dictionary with radiation variables for current timestep and surface type                             
+                    mod_data_rn_[i][surf] = rad['Rn']
+                    
+                if surf == 'watr':
                     wtr_stf = Ts_EB_W(met_d,cs,cfM,mod_data_ts_,mod_data_tm_,Dats,i,rad) # creates dictionary with water surface temperature and energy balance 
                     ### append modelled water variables to dataframes below...                    
                     mod_data_ts_[i][surf] = wtr_stf['TsW']
@@ -145,17 +145,8 @@ if confirm('This run will be called: '+run) == True:    # prints the run name to
                     mod_data_qg_[i][surf]= wtr_stf['QgW']
                     mod_data_ts_[i]['TSOIL'] = wtr_stf['TSOIL']
                     mod_data_rn_[i][surf] = rad['Rn']   
-                if (surf == 'Veg'):
-                    rad  = rn_calc(cs,cfM,met_d,surf,Dats,mod_data_ts_,i)  # creates dictionary with radiation variables for current timestep and surface type  
-                    ##################### ENG BALANCE tree #######################
-                    eng_bals=LUMPS(rad,cs,cfM,met_d,surf,Dats,i)            # creates dictionary with energy balance for current timestep and surface type
-                    #####################  LST tree #########################
-                    mod_data_ts_[i]['Veg'] = met_d['Ta'][i]     #  Ts of tree is assumed equal to Ta (see model validation report Figure 3.8 for justification)
-                    mod_data_qh_[i]['Veg'] = eng_bals['Qh']
-                    mod_data_qe_[i]['Veg'] = eng_bals['Qe']
-                    mod_data_qg_[i]['Veg'] = eng_bals['Qg']
-                    mod_data_rn_[i]['Veg'] = rad['Rn']
-                    
+   
+            mod_data_ts_[i]['Veg'] = met_d['Ta'][i]     #  Ts of tree is assumed equal to Ta (see model validation report Figure 3.8 for justification)
             counter=-1
             for grid in range(0,len(lc_data)):      # now cycle through each grid point
                 hk=+1
@@ -163,9 +154,6 @@ if confirm('This run will be called: '+run) == True:    # prints the run name to
                 LC = [lc_data['roof'][grid], lc_data['road'][grid], lc_data['watr'][grid], lc_data['conc'][grid], lc_data['Veg'][grid],lc_data['dry'][grid],lc_data['irr'][grid]]  # list with land cover for grid point
                 H  = lc_data['H'][grid]         # building height for grid point
                 W  = lc_data['W'][grid]         # stree width for grid point 
-                if W < 5.0:
-                    W = 5.0
-                svfg = (1.0+(H/W)**2)**0.5 - H/W     
                 
                 if cfM['use_obs_ws'] == "Y":                         
                     obs_ws = obs_data['WS_ms_Avg_'+cfM['STa'][counter]]     # observed wind speed file  | users will not used observed wind speed, this is just for testing
@@ -182,8 +170,7 @@ if confirm('This run will be called: '+run) == True:    # prints the run name to
                 ############################ append everyhing to output table #####
                 for_tab     = (lc_data.ix[grid]['FID'],wS_Ta['Ucan'],tS,wS_Ta['Ta_f'],rN, qG,qE,qH,dte)   
                 mod_rslts[i][grid]   = for_tab  ## append the main data to the main modelled data frame 
-                #if svfg < 1.0:
-                #    print grid, mod_rslts[i][grid] , svfg
+
 ##########################################################################################
     mod_rslts = mod_rslts[1:] ### THIS IS THE FINAL DATA ARRAY WITH MODEL OUTPUTS  ######
 ##########################################################################################

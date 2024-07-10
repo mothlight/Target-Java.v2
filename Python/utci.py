@@ -699,6 +699,6 @@ def getUTCIForGrid_RH(Ta,ws,RH,tmrt):
     #  UTCI.fUTCI2(Ta, ws, RH, tmrt)
     #RH=calculateRH(Ta, vapor)
     #print (Ta.item(), ws.item(), float(RH), tmrt.item())
-    getUTCIForGrid=fUTCI2(Ta.item(), ws.item(), float(RH), tmrt.item())
+    getUTCIForGrid=fUTCI2(Ta, ws, float(RH), tmrt)
     return getUTCIForGrid
 

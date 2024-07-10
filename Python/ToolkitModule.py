@@ -18,15 +18,14 @@ Tested with Python 2.7.9 (Linux)
 
 """
 
-from configobj import ConfigObj
-import pandas
+#from configobj import ConfigObj
+#import pandas
 import numpy as np
-import datetime
+#import datetime
 from datetime import timedelta
 import os
-#os.chdir(r'Z:\Documents\PhD\Uni\CRC_toolkit\Toolkit2\scripts')
-import Tkinter, tkFileDialog
-from confirm import confirm
+#import Tkinter, tkFileDialog
+#from confirm import confirm
 ######################################################
 import constants2 as cs     # This is the main constants file where constants are defined. Contains dictionary called cs
 ################## functions used by the code
@@ -36,64 +35,45 @@ from force_restore import Ts_calc_surf   # force restore calcs (3.3 tech notes)
 from simple_water import Ts_EB_W     # simple water body model (3.4 tech notes)
 from ld_mod import ld_mod            # model ldown (appendix tech notes)
 from Ta_module_new import calc_ta    # air temperature module (3.5 tech notes)
-from plotting import val_ts, val_ta, gis    # Ash Broadbent's plotting functions 
+#from plotting import val_ts, val_ta, gis    # Ash Broadbent's plotting functions 
+#import sys
+from utci import getTmrtForGrid_RH,getUTCIForGrid_RH
+
 surfs =   ['roof', 'road' , 'watr', 'conc' , 'Veg'  , 'dry'  , 'irr', 'wall']       ## surfaces types that are modelled. 
 
-import sys
-print 'Number of arguments:', len(sys.argv), 'arguments.'
-print 'Argument List:', str(sys.argv)
-if (len(sys.argv) > 1):
-  ControlFileName = sys.argv[1]
-  print (ControlFileName)
-else:
-  ######## SELECTS MAIN CONTROL FILE (uses Tkinter package) ####
-  root = Tkinter.Tk(); root.withdraw()
-  ControlFileName = tkFileDialog.askopenfilename()
-  root.destroy()
-cfM = ConfigObj(ControlFileName)  ### This is the dictionary that contains all the control file information 
-##############################################################
-dateparse = lambda x: pandas.datetime.strptime(x, cfM['date_fmt'])      # parse dates for input met file using format defined in control file
-run = cfM['run_name']                               # model run name 
-tmstp = cfM['timestep']                             # time step (minutes)
-######### DEFINE START AND FINISH DATES HERE ########
-date1A=datetime.datetime(int(cfM['date1A'][0]), int(cfM['date1A'][1]),int(cfM['date1A'][2]), int(cfM['date1A'][3]))   ## the date/time that the simulation starts
-date1=datetime.datetime(int(cfM['date1'][0]), int(cfM['date1'][1]),int(cfM['date1'][2]), int(cfM['date1'][3]))        ## the date/time for period of interest (i.e. before this will not be saved)
-date2=datetime.datetime(int(cfM['date2'][0]), int(cfM['date2'][1]),int(cfM['date2'][2]), int(cfM['date2'][3]))        ## end date/time of simulation 
-tD = date2-date1A   ## time difference between start and end date
-nt=divmod(tD.days * 86400 + tD.seconds, (60*int(tmstp)))[0] # number of timesteps
-date_range = pandas.date_range(date1,date2,freq= tmstp + 'T')               #  date range for model period 
-date_range1A =pandas.date_range(date1A,(date2-timedelta(hours=1)),freq= tmstp + 'T') # date range for model period (i.e. including spin-up period)
-Dats={'date1A':date1A, 'date1':date1, 'date2':date2, 'date_range':date_range,'date_rangeA':date_range1A} # this is a dictionary with all the date/time information 
-
-#########  MAIN PROGRAM BEGINS HERE ###################
-if confirm('This run will be called: '+run) == True:    # prints the run name to screen, user has to input "Y" to begin simulation 
+def modelRun(nt, cfM, lc_data, met_data_all, date1A, Dats):
+    run = cfM['run_name']                               # model run name 
+    tmstp = cfM['timestep']                             # time step (minutes)
+    #########  MAIN PROGRAM BEGINS HERE ###################
+    #if confirm('This run will be called: '+run) == True:    # prints the run name to screen, user has to input "Y" to begin simulation 
+    #if (True):
 
     ########## LC GRID FILE #############################
-    if cfM['gis_plot'] == 'Y':
-        if not os.path.exists(os.path.join('..','GIS',cfM['site_name'],'mod',run)):          
-            os.makedirs(os.path.join('..','GIS',cfM['site_name'],'mod',run))      ## creates a directory to output at GIS grid (shapefile) | gets used in plotting.py
+    #if cfM['gis_plot'] == 'Y':
+    #    if not os.path.exists(os.path.join('..','GIS',cfM['site_name'],'mod',run)):          
+    #        os.makedirs(os.path.join('..','GIS',cfM['site_name'],'mod',run))      ## creates a directory to output at GIS grid (shapefile) | gets used in plotting.py
 
     ########## DEFINE FIG DIR ########################### 
-    figdir= os.path.join('..','plots',cfM['site_name'],run)       ## defines a director for outputing plots | only gets used if validating air temp (plotting.py)
+    figdir= os.path.join('..','plots',cfM['site_name'],run)       ## defines a directory for outputing plots | only gets used if validating air temp (plotting.py)
     if not os.path.exists(figdir):          
             os.makedirs(figdir)
 
     ################# read LC data  #####################        
-    lc_data = pandas.read_csv(os.path.join('..','input',cfM['site_name'],'LC',cfM['inpt_lc_file'])) # reads the input land cover data
- 
+    #lc_data = pandas.read_csv(os.path.join('..','input',cfM['site_name'],'LC',cfM['inpt_lc_file'])) # reads the input land cover data
+
     ############## OBS AWS DATA files  #############################
-    if cfM['val_ts'] == 'Y':
-        obs_file = os.path.join('..','obs',cfM['site_name'],'stations_MET',cfM['inpt_obs_file'])  # file for observed AWS data
-        obs_data = pandas.read_csv(obs_file,parse_dates =['TIMESTAMP'], date_parser=dateparse, index_col=['TIMESTAMP'])  # reads observed AWS data and puts in dataframe  | only gets used if validating air temp (plotting.py)
+    #if cfM['val_ts'] == 'Y':
+    #    obs_file = os.path.join('..','obs',cfM['site_name'],'stations_MET',cfM['inpt_obs_file'])  # file for observed AWS data
+    #    obs_data = pandas.read_csv(obs_file,parse_dates =['TIMESTAMP'], date_parser=dateparse, index_col=['TIMESTAMP'])  # reads observed AWS data and puts in dataframe  | only gets used if validating air temp (plotting.py)
 
     ########## DEFINE INPUT MET FILE LOCATION HERE #######
-    met_file = os.path.join('..','input',cfM['site_name'],'MET',cfM['inpt_met_file'])    # input meteorological forcing data file 
-    met_data = pandas.read_csv(met_file,parse_dates=['datetime'], date_parser=dateparse,index_col=['datetime']) # convert to data frame
-    met_data_all = met_data.ix[date1A:date2]   # main forcing meteorological dataframe (including spin up)
-    met_data_all = met_data_all.interpolate(method='time') # interpolates forcing data 
-    if cfM['mod_ldwn'] == 'Y':                                          # model Ldown in data is not available
-        for i in range(len(met_data_all)):
-            met_data_all.ix[i]['Ld'] = ld_mod(met_data_all.ix[i])['Ld_md'] ## Ld_mod is added to meteorological forcing data frame
+    #met_file = os.path.join('..','input',cfM['site_name'],'MET',cfM['inpt_met_file'])    # input meteorological forcing data file 
+    #met_data = pandas.read_csv(met_file,parse_dates=['datetime'], date_parser=dateparse,index_col=['datetime']) # convert to data frame
+    #met_data_all = met_data.ix[date1A:date2]   # main forcing meteorological dataframe (including spin up)
+    #met_data_all = met_data_all.interpolate(method='time') # interpolates forcing data 
+    #if cfM['mod_ldwn'] == 'Y':                                          # model Ldown in data is not available
+    #    for i in range(len(met_data_all)):
+    #        met_data_all.ix[i]['Ld'] = ld_mod(met_data_all.ix[i])['Ld_md'] ## Ld_mod is added to meteorological forcing data frame
 
     ########## DEFINE MAIN DATAFRAME ####################  dataframe for different modelled variables     
     mod_data_ts_=np.zeros((nt,10), np.dtype([('wall','<f8'),('roof','<f8'), ('road','<f8'), ('watr','<f8'), ('conc','<f8'), ('Veg','<f8'), ('dry','<f8'), ('irr','<f8'), ('TSOIL','<f8'), ('avg','<f8'),('date',object)]))   # surface temperature of each surface    
@@ -106,6 +86,8 @@ if confirm('This run will be called: '+run) == True:    # prints the run name to
 
     mod_rslts=np.zeros((nt,len(lc_data),1),  np.dtype([('ID',np.int32),('Ws', '<f8'), ('Ts','<f8'), ('Ta','<f8'),('Rn', '<f8'),('Qg', '<f8'), ('Qe','<f8'), ('Qh','<f8'),('date',object)]))   # this is the main data array where surface averaged outputs are stored
     
+    mod_rslts_tmrt_utci=np.zeros((nt,len(lc_data),1),  np.dtype([('ID',np.int32),('tmrt', '<f8'), ('utci','<f8'),('date',object)]))
+   
         
     stations = lc_data['FID'].values
     hk=-1
@@ -223,7 +205,7 @@ if confirm('This run will be called: '+run) == True:    # prints the run name to
                     fw = 8
                 if (svfwA > 0.9) and (svfwA <= 1.0):
                     fw = 9
-                             
+                            
                 if cfM['use_obs_ws'] == "Y":                         
                     obs_ws = obs_data['WS_ms_Avg_'+cfM['STa'][counter]]     # observed wind speed file  | users will not used observed wind speed, this is just for testing
                 else:
@@ -240,40 +222,28 @@ if confirm('This run will be called: '+run) == True:    # prints the run name to
                 ############################ append everyhing to output table #####
                 for_tab     = (lc_data.ix[grid]['FID'],wS_Ta['Ucan'],tS,wS_Ta['Ta_f'],rN, qG,qE,qH,dte)   
                 mod_rslts[i][grid]   = for_tab  ## append the main data to the main modelled data frame 
+                
+                
+
+                # lat hardcoded for now (it is needed to calculate the zenith), should move to config file eventually 
+                lat = -37.8136
+                yd_actual = dte.timetuple().tm_yday
+                TM = dte.timetuple().tm_hour
+                lup = cs.cs['sb']*(wS_Ta['Ta_f']+273.15)**4
+                #print (wS_Ta['Ta_f'],met_d['RH'][i],wS_Ta['Ucan'],met_d['Kd'][i],tS,met_d['Ld'][i], lup ,yd_actual, TM, lat)
+                tmrt = getTmrtForGrid_RH(wS_Ta['Ta_f'],met_d['RH'][i],wS_Ta['Ucan'],met_d['Kd'][i],tS,met_d['Ld'][i], lup ,yd_actual, TM, lat)
+                #print (tmrt)
+                utci = getUTCIForGrid_RH(wS_Ta['Ta_f'],wS_Ta['Ucan'],met_d['RH'][i],tmrt)
+                for_tab_tmrt_utci     = (lc_data.ix[grid]['FID'],tmrt,utci,dte) 
+                #print (tmrt,utci)
+                mod_rslts_tmrt_utci[i][grid] = for_tab_tmrt_utci
+                
+                
+                
                 #if svfg < 1.0:
                 #    print grid, mod_rslts[i][grid] , svfg
 ##########################################################################################
     mod_rslts = mod_rslts[1:] ### THIS IS THE FINAL DATA ARRAY WITH MODEL OUTPUTS  ######
 ##########################################################################################
-    outdir= os.path.join('..','output',cfM['site_name'])       ## defines a director for outputing plot
-    if not os.path.exists(outdir):          
-            os.makedirs(outdir)
-    np.save(os.path.join('..','output',cfM['site_name'], run), mod_rslts)   ### saves the output array as a numpy array can load with numpy.load
-
-### run Ash's plottling scripts...    
-    if cfM['val_ts'] == 'Y':
-        if confirm('validate Ts for AWS?') == True:      
-            val_ts(cfM,run,stations,mod_rslts)    
-    if cfM['val_ta'] == "Y": 
-        if confirm('validate Ta for AWS?') == True:
-            val_ta(cfM,met_data,stations,obs_data,mod_rslts,Dats)
-    if cfM['gis_plot'] == 'Y':
-        if confirm('plot GIS for grid?') == True:
-            gis(cfM,mod_rslts,run)
-        
-## save the control file....      
-    inpt1 = open(ControlFileName, 'r')
-    outpt1 = open(os.path.join(figdir,'main_control_file.txt'),'w')
-    txt1 = inpt1.read()
-    outpt1.write(txt1)
-    inpt1.close()
-    outpt1.close()
-
-## save the constants file..    
-    inpt1 = open(os.path.join('.','constants1.py'),'r')
-    outpt1 = open(os.path.join(figdir,'constants.txt'),'w')
-    txt1 = inpt1.read()
-    outpt1.write(txt1)
-    inpt1.close()
-    outpt1.close()
-
+    mod_rslts_tmrt_utci = mod_rslts_tmrt_utci[1:]
+    return mod_rslts,mod_rslts_tmrt_utci

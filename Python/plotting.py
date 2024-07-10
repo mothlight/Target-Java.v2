@@ -24,10 +24,8 @@ from scipy.stats import stats
 from matplotlib.pyplot import cm
 import itertools  
 
-mp.close('all') 
 
-stns = [1,4,8,11,25,2,5,6,17,3,21,22,9,10,12,13,18,19,20,28,16,23,24,26,29,30,27]
-clrS = ['skyblue','skyblue','skyblue','skyblue','skyblue','lawngreen','lawngreen','lawngreen','lawngreen','orange','orange','orange','r','r','r','r','r','r','r','mediumorchid','mediumorchid','mediumorchid','mediumorchid','mediumorchid','mediumorchid','mediumorchid','blue']
+mp.close('all') 
             
 def val_ts(cfM,run,stations,mod_rslts):
                    
@@ -88,8 +86,8 @@ def val_ts(cfM,run,stations,mod_rslts):
                 ts_obs_plt1 = Ts_obs1[Ts_obs1['station']==int(st)]
                 ts_obs_plt2 = Ts_obs2[Ts_obs2['station']==int(st)]
                 
-                axTs1.scatter(float(ts_obs_plt1['Ts_obs']),modTs1,c=clrS[cnt],label=st_name)
-                axTs2.scatter(float(ts_obs_plt2['Ts_obs']),modTs2,c=clrS[cnt],label=st_name)
+                axTs1.scatter(float(ts_obs_plt1['Ts_obs']),modTs1,c=color[cnt],label=st_name)
+                axTs2.scatter(float(ts_obs_plt2['Ts_obs']),modTs2,c=color[cnt],label=st_name)
         
                 axTs1.text(float(ts_obs_plt1['Ts_obs']),modTs1,st_name, fontsize=10)
                 axTs2.text(float(ts_obs_plt2['Ts_obs']),modTs2,st_name, fontsize=10) 
@@ -118,20 +116,12 @@ def val_ts(cfM,run,stations,mod_rslts):
             slope1, intercept1, r_value1, p_value1, std_err1 = stats.linregress(Ts1_o,Ts1_m)
             slope2, intercept2, r_value2, p_value2, std_err2 = stats.linregress(Ts2_o,Ts2_m)
             
-            ei1  = [abs(x-y) for x,y, in zip(Ts1_o,Ts1_m)]
-            ei2  = [abs(x-y) for x,y, in zip(Ts2_o,Ts2_m)]
-            
-            ei3  = [x-y for x,y, in zip(Ts1_o,Ts1_m)]           
-            ei4  = [x-y for x,y, in zip(Ts2_o,Ts2_m)]
-            
-            mae1=np.mean(ei1)
-            mae2=np.mean(ei2)
-            
-            mbe1=np.mean(ei3)
-            mbe2=np.mean(ei4)
-            
-            rmse1 = round(np.sqrt(sum(np.transpose(ei3)*ei3)/len(Ts1_m)),1)
-            rmse2 = round(np.sqrt(sum(np.transpose(ei4)*ei4)/len(Ts2_m)),1)
+            ei1  = [x-y for x,y, in zip(Ts1_o,Ts1_m)]
+            ei2  = [x-y for x,y, in zip(Ts2_o,Ts2_m)]
+            mae1=abs(np.mean(ei1))
+            mae2=abs(np.mean(ei2))
+            rmse1 = round(np.sqrt(sum(np.transpose(ei1)*ei1)/len(Ts1_m)),1)
+            rmse2 = round(np.sqrt(sum(np.transpose(ei2)*ei2)/len(Ts2_m)),1)
             
             axTs1.text(ts_max1*0.98,ts_min1+(0.08*ts_max1), 'r2='+str(round(r_value1,2)))
             axTs1.text(ts_max1*0.98,ts_min1+(0.05*ts_max1), 'rmse='+str(round(rmse1,2)))
@@ -205,10 +195,8 @@ def val_ta(cfM,met_data,stations,obs_data,mod_rslts,Dats):
 #            stat_roof=[]
             cnt=-1
             c=0
-            #STa = ['01','02','03','04','05','06','07','08','09','10','11','12','13','16','17','18','19','20','21','22','23','24','25','26','27','28','29','30']
-            stns = [1,4,8,11,25,2,5,6,17,3,21,22,9,10,12,13,18,19,20,28,16,23,24,26,29,30,27]
-            STa   = ['01','04','08','11','25','02','05','06','17','03','21','22','09','10','12','13','18','19','20','16','23','24','26','28','29','30','27']
-            for st in stns:
+            STa = ['01','02','03','04','05','06','07','08','09','10','11','12','13','16','17','18','19','20','21','22','23','24','25','26','27','28','29','30']
+            for st in stations:
                 
                 nfig = nfig + 1
                 fig = mp.figure(nfig,figsize=(8.,8.), dpi=300)
@@ -238,16 +226,13 @@ def val_ta(cfM,met_data,stations,obs_data,mod_rslts,Dats):
 #                obs_station1 = obs_station1.reindex(date_range,method='ffill')  	## nan out missing values
 #                obs_station1 = obs_station1.ix[date1:date2-timedelta(minutes=30)]    ## index obs data to dates         
                         
-
-                obs_data1 = obs_data.resample(cfM['timestep']).ffill()
-                #obs_data1 = obs_data1.ix[date1:date2]  ## index obs data to dates'
+                obs_data1 = obs_data.ix[date1:date2]        		## index obs data to dates
                 obs_data1 = obs_data1.reindex(date_range,method='ffill')  	## nan out missing values
-                obs_data1 = obs_data1.ix[date1:date2-timedelta(seconds=int(cfM['timestep'][:-1]))]    ## index obs data to dates         
+                obs_data1 = obs_data1.ix[date1:date2-timedelta(minutes=30)]    ## index obs data to dates         
                                                 
-                #mod_rslts  = mod_rslts.resample('30T').ffill()
-
-                mod_rslts1 = mod_rslts[mod_rslts['ID']==int(st)]
-                mod_rslts2 = mod_rslts1[(mod_rslts1['date'] >= date1) & (mod_rslts1['date'] <= date2)]
+    #
+                mod_rslts1 = mod_rslts[(mod_rslts['date'] >= date1) & (mod_rslts['date'] <= date2)]
+                mod_rslts2 = mod_rslts1[mod_rslts1['ID']==int(st)]
                     
                 obs_dataM = obs_data1[pandas.notnull(obs_data1['AirTC_Avg_'+STa[cnt]]) & pandas.notnull(mod_rslts2['Ta'])]
                 
@@ -260,10 +245,10 @@ def val_ta(cfM,met_data,stations,obs_data,mod_rslts,Dats):
                 
                 ax3.plot(list(obs_data1['WS_ms_Avg_'+STa[cnt]]))
                 ax3.plot(list(mod_rslts2['Ws']), ls='--')   ### plot times series wind speed
-                # ax4.plot(list(mod_rslts2['Qh']))
-                # ax5.plot(list(mod_rslts2['Qe']))
-                # ax6.plot(list(mod_rslts2['Qg']))
-                # ax7.plot(list(mod_rslts2['Rn']))
+                ax4.plot(list(mod_rslts2['Qh']))
+                ax5.plot(list(mod_rslts2['Qe']))
+                ax6.plot(list(mod_rslts2['Qg']))
+                ax7.plot(list(mod_rslts2['Rn']))
                 
                 ax1.set_title('station '+str(st))
                 ax1.set_ylabel(u'$T_{ac}$ (°C)')
@@ -288,8 +273,8 @@ def val_ta(cfM,met_data,stations,obs_data,mod_rslts,Dats):
                 Ta_m.append(mod_rsltsM['Ta'])	## cummulative list
                 Ta_o.append(obs_dataM['AirTC_Avg_'+STa[cnt]])
                 				
-                ax_ta.scatter(obs_data1['AirTC_Avg_'+STa[cnt]],mod_rslts2['Ta'], c=clrS[cnt],label=st_name, alpha=0.4 )
-                ax_ws.scatter(obs_data1['WS_ms_Avg_'+STa[cnt]],mod_rslts2['Ws'], c=clrS[cnt],label=st_name, alpha = 0.4 )
+                ax_ta.scatter(obs_data1['AirTC_Avg_'+STa[cnt]],mod_rslts2['Ta'], c=color[cnt],label=st_name, alpha=0.4 )
+                ax_ws.scatter(obs_data1['WS_ms_Avg_'+STa[cnt]],mod_rslts2['Ws'], c=color[cnt],label=st_name, alpha = 0.4 )
     
                 avgminM=[]
                 avgmaxM=[]
@@ -317,10 +302,10 @@ def val_ta(cfM,met_data,stations,obs_data,mod_rslts,Dats):
                 mxs_obs = maxs[0]-means[0] 
                 mxs_mod = maxs[1]-means[1] 
                 
-                ax_bp.errorbar(ind[0], means[0], fmt='o', color='black')
-                ax_bp.errorbar(ind[1], means[1], fmt='o', color='grey')
-                ax_bp.errorbar(ind[0], means[0], yerr=[[mns_obs], [mxs_obs]], fmt=' ', ecolor='black')
-                ax_bp.errorbar(ind[1], means[1], yerr=[[mns_mod], [mxs_mod]], fmt=' ', ecolor='grey')                #boxO = ax_bp1.boxplot(obs_stationM['Ta'].values,  positions=ind[0], widths =1)
+                ax_bp.errorbar(ind[0], means[0], fmt='or')
+                ax_bp.errorbar(ind[1], means[1], fmt='ob')
+                ax_bp.errorbar(ind[0], means[0], yerr=[[mns_obs], [mxs_obs]], fmt=' ', ecolor='red')
+                ax_bp.errorbar(ind[1], means[1], yerr=[[mns_mod], [mxs_mod]], fmt=' ', ecolor='blue')                #boxO = ax_bp1.boxplot(obs_stationM['Ta'].values,  positions=ind[0], widths =1)
                 #boxM = ax_bp1.boxplot  (mod_rsltsM['Ta'].values, positions=ind[1], widths =1)
                 							
                 
@@ -363,8 +348,8 @@ def val_ta(cfM,met_data,stations,obs_data,mod_rslts,Dats):
             ax_bp.set_xticks(xticks)
             ax_bp1.set_xticks(xtick2)
             
-            ax_bp.set_xticklabels(stns, size='small')
-            ax_bp1.set_xticklabels(stns, size='small')
+            ax_bp.set_xticklabels(stations, size='small')
+            ax_bp1.set_xticklabels(stations, size='small')
             
             ax_bp.set_ylim((15 ,35))
             ax_bp1.set_ylim((15 ,35))
@@ -374,17 +359,14 @@ def val_ta(cfM,met_data,stations,obs_data,mod_rslts,Dats):
             
             ax_bp.set_xlabel('station')
             ax_bp.set_ylabel(u'$T_{ac}$ (°C)')
-            ax_bp.text(xticks[(len(xticks)/2)],34, "observed", color='black')
-            ax_bp.text(xticks[(len(xticks)/2)],33, "modelled", color='grey')
+            ax_bp.text(xticks[(len(xticks)/2)],34, "observed", color='red')
+            ax_bp.text(xticks[(len(xticks)/2)],33, "modelled", color='blue')
             
             ax_bp1.set_xlabel('station')
             ax_bp1.set_ylabel(u'$T_{ac}$ (°C)')
             ax_bp1.text(xtick2[(len(xtick2)/2)],34, "observed", color='green')
             ax_bp1.text(xtick2[(len(xtick2)/2)],33, "modelled", color='blue')
             
-            for xtick, color in zip(ax_bp.get_xticklabels(), clrS):
-                xtick.set_color(color)
-
             figbp.savefig(figdir+'//'+radi+'_boxplot')
             figbp2.savefig(figdir+'//'+radi+'_boxplot2')
             
@@ -402,12 +384,12 @@ def val_ta(cfM,met_data,stations,obs_data,mod_rslts,Dats):
             ax_ta.axis('equal')
             ax_ws.axis('equal')
             
-            ax_ta.set_ylim((ta_min-(0.1*ta_min) ,40.))
-            ax_ta.set_xlim((ta_min-(0.1*ta_min) ,40.))
+            ax_ta.set_ylim((ta_min-(0.1*ta_min) ,ta_max+(0.1*ta_max)))
+            ax_ta.set_xlim((ta_min-(0.1*ta_min) ,ta_max+(0.1*ta_max)))
             ax_ta.plot([-100, 100],[-100,100], "k--")
-            ax_ta.legend(loc=2,fontsize='small',ncol=4,scatterpoints=1)
-            ax_ta.set_xlabel(u'observed  $T_{ac}$ (°C)')
-            ax_ta.set_ylabel(u'modelled  $T_{ac}$ (°C)')
+            ax_ta.legend(loc=2,fontsize='small',ncol=3,scatterpoints=1)
+            ax_ta.set_xlabel(u'obs  $T_{ac}$ (°C)')
+            ax_ta.set_ylabel(u'mod  $T_{ac}$ (°C)')
             
             
             ax_ws.set_ylim((ws_min-(0.1*ws_min),ws_max+(0.1*ws_max)))
@@ -418,17 +400,13 @@ def val_ta(cfM,met_data,stations,obs_data,mod_rslts,Dats):
             ax_ws.set_ylabel('mod WS (m/s)')
             
             slope, intercept, r_value, p_value, std_err = stats.linregress(Ta_o,Ta_m)
-            eia  = [abs(x-y) for x,y, in zip(Ta_o,Ta_m)]
-            eib  = [x-y for x,y, in zip(Ta_o,Ta_m)] 
-            mae=np.mean(eia)
-            mbe=np.mean(eib)
-            rmse = round(np.sqrt(sum(np.transpose(eib)*eib)/len(Ta_m)),1)
-            ax_ta.text(30,17.5, '$\mathregular{r^2}=$'+str(round(r_value,2)))
-            ax_ta.text(30,16.5, 'RMSE='+str(round(rmse,2)))
-            ax_ta.text(30,15.5, 'MBE='+str(round(mbe,2)))
-            ax_ta.text(30,14.5, 'MAE='+str(round(mae,2)))
-            ax_ta.text(30,13.5, 'n='+str(len(Ta_o)))            
-           
+            ei  = [x-y for x,y, in zip(Ta_o,Ta_m)]
+            mae=abs(np.mean(ei))
+            rmse = round(np.sqrt(sum(np.transpose(ei)*ei)/len(Ta_m)),1)
+            ax_ta.text(30,17.5, 'r='+str(round(r_value,2)))
+            ax_ta.text(30,16.5, 'rmse='+str(round(rmse,2)))
+            ax_ta.text(30,15.5, 'mae='+str(round(mae,2)))
+            
     
             	
             mfig.savefig(figdir+'//'+radi+'_all_stations_scatter_Ta')
@@ -529,29 +507,25 @@ def gis(cfM,mod_rslts,run):
                                       obs1.append(float(obs[i]))
         
         b, a, r_value, p_value, std_err = stats.linregress(obs1,mod1)
-        
-        ea  = [abs(x-y) for x,y, in zip(mod1,obs1)]
-        eb  = [x-y for x,y, in zip(mod1,obs1)]
-        
+        ei  = [x-y for x,y, in zip(mod1,obs1)]
         r_value = round(r_value,1)
-        rmse = round(np.sqrt(sum(np.transpose(eb)*eb)/len(obs1)),1)   
+        rmse = round(np.sqrt(sum(np.transpose(ei)*ei)/len(obs1)),1)   
         
-        mae=round(np.mean(ea),1)     
-        mbe=round(np.mean(eb),1)
-                
         x=[-100,100]
         y=[-100,100]
         
         ax1 = fig.add_subplot(111)
-        ax1.scatter(obs1,mod1,color='black',alpha=0.4)
+        ax1.scatter(obs1,mod1,alpha=0.4)
         
         ax1.set_xlim((  (min(obs1)*0.95), (max(obs1)*1.1)  ))
         ax1.set_ylim((  (min(obs1)*0.95), (max(obs1)*1.1)  ))
-        ax1.text((min(obs1)*1.1),1.06*(max(obs1)), '$\mathregular{r^2}=$'+str(r_value),size='small')        
-        ax1.text((min(obs1)*1.1),1.025*(max(obs1)), 'RMSE='+str(rmse),size='small')
-        ax1.text((min(obs1)*1.1),0.99*(max(obs1)), 'MBE='+str(mbe),size='small')
-        ax1.text((min(obs1)*1.1),0.955*(max(obs1)), 'MAE='+str(mae),size='small')        
-        ax1.text((min(obs1)*1.1),0.92*(max(obs1)), 'n='+str(len(obs1)),size='small')
+        ax1.text((min(obs1)*1.1),(max(obs1)*0.95), 'RMSE='+str(rmse))
+        ax1.text((min(obs1)*1.1),(max(obs1)*0.9), '$r^2$='+str(r_value))
+        ax1.text((min(obs1)*1.1),(max(obs1)*0.85), '$n$='+str(len(obs1)))
+#        if prd == 'night':
+#            ax1.text(5.5,5.5, '(a)')
+#        if prd == 'day':
+#            ax1.text(18.5,18.5, '(b)')
 
 
         ax1.set_xlabel('Observed $T_{surf}$ ($^\circ$C)')

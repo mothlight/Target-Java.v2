@@ -46,6 +46,10 @@ def rn_calc(cs,cfM,met,surf,Dats,mod_ts,i):
                     Ta_srfp = mod_ts[surf][i-3]         # "previous" modelled T_surf (3 timesteps back)
                     Ta_srf  = mod_ts[surf][i-2]         # "current" modelled T_Surf (2 time steps back)
                     Ta_srfn = mod_ts[surf][i-1]         # "next" modelled T_Surf (1 time steps back)
+                    
+                    #print (met['Kd'][i], met['Ld'][i], type(met['Kd'][i]), type(met['Ld'][i]))
+                    if (met['Ld'][i] == 380.0):
+                        print ('Using fake Ld value')
                  
                     Rn     = met['Kd'][i]*(1-albedo)     + emiss*(met['Ld'][i]   - cs.cs['sb']*(Ta_srf+273.15)**4)     # modified version of eq 11 Loridan et al. (2011)
                     Rnprev = met['Kd'][i-1]*(1-albedo)   + emiss*(met['Ld'][i-1]   - cs.cs['sb']*(Ta_srfp+273.15)**4)     

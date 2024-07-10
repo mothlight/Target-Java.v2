@@ -29,7 +29,7 @@ from datetime import timedelta
 def LUMPS(rad,cs,cfM,met,surf,Dats,i):
 
 
-    if Dats['dte'] <= Dats['date1A'] +  timedelta(seconds=(2*int(cfM['timestep'][:-1]))):
+    if Dats['dte'] <= Dats['date1A'] +  timedelta(minutes=(2*int(cfM['timestep']))):
         
         Qh=0.
         Qe=0.
@@ -47,7 +47,7 @@ def LUMPS(rad,cs,cfM,met,surf,Dats,i):
     betA = cs.cs['beta'][surf]
     		     
       
-    Lambda =  2.501 - 0.002361*met['Ta'][i]                                 # MJ / kg -  latent heat of vaporization
+    Lambda =  2.501 - 0.002361*met['Ta'][1]                                 # MJ / kg -  latent heat of vaporization
 
     gamma  = ((met['P'][i]/10)*cs.cs['cp']) / (cs.cs['e']*Lambda)                         # kPa / C- psychrometric constant
     ew = 6.1121*(1.0007+3.46e-6*(met['P'][i]/10))**((17.502*(met['Ta'][i]))/(240.97+(met['Ta'][i])))          # in kPa

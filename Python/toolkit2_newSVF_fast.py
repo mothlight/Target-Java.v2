@@ -28,7 +28,7 @@ os.chdir(r'Z:\Documents\PhD\Uni\CRC_toolkit\Toolkit2\scripts')
 import Tkinter, tkFileDialog
 from confirm import confirm
 ######################################################
-import constants2 as cs     # This is the main constants file where constants are defined. Contains dictionary called cs
+import constants1 as cs     # This is the main constants file where constants are defined. Contains dictionary called cs
 ################## functions used by the code
 from rn_calc_3 import rn_calc_new   # net radiation calcs  (3.1 tech notes)
 from LUMPS import LUMPS       # energy balance calcs (3.2 tech notes)
@@ -161,19 +161,11 @@ if confirm('This run will be called: '+run) == True:    # prints the run name to
                 W  = lc_data['W'][grid]         # stree width for grid point 
                 if W < 5.0:
                     W = 5.0
-
+                svfgA = (1.0+(H/W)**2)**0.5 - H/W 
                 
                 wall_area = H*30.0*2.0
                 
-                tree_area =  ((float(cs.cs['res'])**2)*lc_data['Veg'][grid])
-                tree_width = tree_area/float(cs.cs['res'])
                 
-                Wtree = W-tree_width
-                
-                if Wtree <= 0:
-                    Wtree = 0.1
- 
-                svfgA = (1.0+(H/Wtree)**2)**0.5 - H/Wtree                
                 if svfgA <= 0.1:
                     fg = 0
                 if (svfgA > 0.1) and (svfgA <= 0.2):
@@ -200,11 +192,11 @@ if confirm('This run will be called: '+run) == True:    # prints the run name to
                 else:
                     obs_ws = []  # create an empty list for obs wind speed  - place filler
                 ##################### Aggregate by land cover  ###################
-                tS =sum([a*b for a,b in zip(LC,[mod_data_ts_['roof'][i][fg],mod_data_ts_['road'][i][fg],mod_data_ts_['watr'][i][fg],mod_data_ts_['conc'][i][fg],mod_data_ts_['Veg'][i][9],mod_data_ts_['dry'][i][fg],mod_data_ts_['irr'][i][fg]])])    # surface averaged Tsurf
-                qH =sum([a*b for a,b in zip(LC,[mod_data_qh_['roof'][i][fg],mod_data_qh_['road'][i][fg],mod_data_qh_['watr'][i][fg],mod_data_qh_['conc'][i][fg],mod_data_qh_['Veg'][i][9],mod_data_qh_['dry'][i][fg],mod_data_qh_['irr'][i][fg]])])    # surface averaged Qh
-                qE =sum([a*b for a,b in zip(LC,[mod_data_qe_['roof'][i][fg],mod_data_qe_['road'][i][fg],mod_data_qe_['watr'][i][fg],mod_data_qe_['conc'][i][fg],mod_data_qe_['Veg'][i][9],mod_data_qe_['dry'][i][fg],mod_data_qe_['irr'][i][fg]])])    # surface averaged Qe
-                qG =sum([a*b for a,b in zip(LC,[mod_data_qg_['roof'][i][fg],mod_data_qg_['road'][i][fg],mod_data_qg_['watr'][i][fg],mod_data_qg_['conc'][i][fg],mod_data_qg_['Veg'][i][9],mod_data_qg_['dry'][i][fg],mod_data_qg_['irr'][i][fg]])])    # surface averaged Qg
-                rN =sum([a*b for a,b in zip(LC,[mod_data_rn_['roof'][i][fg],mod_data_rn_['road'][i][fg],mod_data_rn_['watr'][i][fg],mod_data_rn_['conc'][i][fg],mod_data_rn_['Veg'][i][9],mod_data_rn_['dry'][i][fg],mod_data_rn_['irr'][i][fg]])])    # surface average Rn
+                tS =sum([a*b for a,b in zip(LC,[mod_data_ts_['roof'][i][fg],mod_data_ts_['road'][i][fg],mod_data_ts_['watr'][i][fg],mod_data_ts_['conc'][i][fg],mod_data_ts_['Veg'][i][fg],mod_data_ts_['dry'][i][fg],mod_data_ts_['irr'][i][fg]])])    # surface averaged Tsurf
+                qH =sum([a*b for a,b in zip(LC,[mod_data_qh_['roof'][i][fg],mod_data_qh_['road'][i][fg],mod_data_qh_['watr'][i][fg],mod_data_qh_['conc'][i][fg],mod_data_qh_['Veg'][i][fg],mod_data_qh_['dry'][i][fg],mod_data_qh_['irr'][i][fg]])])    # surface averaged Qh
+                qE =sum([a*b for a,b in zip(LC,[mod_data_qe_['roof'][i][fg],mod_data_qe_['road'][i][fg],mod_data_qe_['watr'][i][fg],mod_data_qe_['conc'][i][fg],mod_data_qe_['Veg'][i][fg],mod_data_qe_['dry'][i][fg],mod_data_qe_['irr'][i][fg]])])    # surface averaged Qe
+                qG =sum([a*b for a,b in zip(LC,[mod_data_qg_['roof'][i][fg],mod_data_qg_['road'][i][fg],mod_data_qg_['watr'][i][fg],mod_data_qg_['conc'][i][fg],mod_data_qg_['Veg'][i][fg],mod_data_qg_['dry'][i][fg],mod_data_qg_['irr'][i][fg]])])    # surface averaged Qg
+                rN =sum([a*b for a,b in zip(LC,[mod_data_rn_['roof'][i][fg],mod_data_rn_['road'][i][fg],mod_data_rn_['watr'][i][fg],mod_data_rn_['conc'][i][fg],mod_data_rn_['Veg'][i][fg],mod_data_rn_['dry'][i][fg],mod_data_rn_['irr'][i][fg]])])    # surface average Rn
                 ##################### CALC air temperature ########################
                 wS_Ta = calc_ta(W,H,met_d,cs,qH,tS,Dats,cfM,obs_ws,i)  # dictionary for canopy air temperature and wind speed
                 ############################ append everyhing to output table #####
@@ -240,7 +232,7 @@ if confirm('This run will be called: '+run) == True:    # prints the run name to
     outpt1.close()
 
 ## save the constants file..    
-    inpt1 = open(os.path.join('.','constants2.py'),'r')
+    inpt1 = open(os.path.join('.','constants1.py'),'r')
     outpt1 = open(os.path.join(figdir,'constants.txt'),'w')
     txt1 = inpt1.read()
     outpt1.write(txt1)
