@@ -46,6 +46,7 @@ public class UrbanPlumberOutput
 //			double Tsfc_R, double Tsfc_T, double Tsfc_N, double Tsfc_S, double Tsfc_E, double Tsfc_W ,
 //			int numroof2, int numstreet2, int numNwall2, int numSwall2, int numEwall2, int numWwall2,
 //			double Kdir, double Kdif
+			, String runName
 			)
 	{
 //    	double metTa0 = (double)met0.get(MetData.Ta);
@@ -121,7 +122,7 @@ public class UrbanPlumberOutput
 		String tab = "\t";
 		
 		String urbanPlumberOutputFile = null;
-		urbanPlumberOutputFile = "UrbanPlumber.out";
+		urbanPlumberOutputFile = "UrbanPlumber_" + runName + ".out";
 //		int decimalPoints = 5;		
 //		formattedTime =  common.padLeft( time_out, 6, '0') ;
 		

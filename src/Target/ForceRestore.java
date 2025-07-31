@@ -61,10 +61,12 @@ public class ForceRestore
 			double modTmMinus1Surf = mod_tm.get(0);
 			double QGS 	= eng_bal.get(Lumps.QG_KEY);		//## calculate ground heat flux 
             
-			double D = Math.sqrt((2*Constants.cs_K.get(surf))/((2*Math.PI)/86400.));	//# the damping depth for the annual temperature cycle
+			double D = Math.sqrt((2.*Constants.cs_K.get(surf))/((2.*Math.PI)/86400.));	//# the damping depth for the annual temperature cycle
+//		System.out.println(Constants.cs_K.get(surf) + " cs_K " + surf);
+//		System.out.println(Constants.cs_C.get(surf) + " cs_C " + surf);
 			double Dy = D * Math.sqrt(365.);	
 
-			double delta_Tg = ((2/(Constants.cs_C.get(surf)*D)*QGS))-(((2*Math.PI)/86400.)*(modTsMinus1Surf-modTmMinus1Surf));	//## the change in Tsurf per second 
+			double delta_Tg = ((2./(Constants.cs_C.get(surf)*D)*QGS))-(((2.*Math.PI)/86400.)*(modTsMinus1Surf-modTmMinus1Surf));	//## the change in Tsurf per second 
 			double delta_Tm = QGS/(Constants.cs_C.get(surf)*Dy);		//## change in Tm per second
                  
 			tM = modTmMinus1Surf + (delta_Tm*tmstpInt);		//# update Tm (seconds)

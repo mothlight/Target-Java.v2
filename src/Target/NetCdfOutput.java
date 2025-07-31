@@ -30,6 +30,13 @@ public class NetCdfOutput
 	public static final String UCAN = "Ucan";
 	public static final String PET = "Pet";
 	
+	public static final String QE = "Qe";
+	public static final String QG = "Qg";
+	public static final String QH = "Qh";
+	public static final String RN = "Rn";
+	public static final String UTCI = "UTCI";
+	public static final String TMRT = "Tmrt";
+	
 	private boolean disableUtb = false;
 	private boolean disableFid = false;
 	private boolean disableModUTaRef = false;	
@@ -41,6 +48,13 @@ public class NetCdfOutput
 	private boolean disableTsurfHorz = false;
 	private boolean disableUcan = false;
 	private boolean disablePet = false;
+	
+	private boolean disableQe = false;
+	private boolean disableQg = false;
+	private boolean disableQh = false;
+	private boolean disableRn = false;
+	private boolean disableUTCI = false;
+	private boolean disableTmrt = false;
 	
 	private boolean individualNetcdfFiles = false;
 	private long simulationStartTimeLong = 0;
@@ -91,6 +105,24 @@ public class NetCdfOutput
 					break;
 				case PET:
 					disablePet = true;
+					break;
+				case QE:
+					disableQe = true;
+					break;
+				case QG:
+					disableQg = true;
+					break;
+				case QH:
+					disableQh = true;
+					break;
+				case RN:
+					disableRn = true;
+					break;
+				case UTCI:
+					disableUTCI = true;
+					break;
+				case TMRT:
+					disableTmrt = true;
 					break;
 			}
 				
@@ -161,29 +193,53 @@ public class NetCdfOutput
 				+ date1ADateStr
 				));
 		
-		Variable tempmrt = writer.addVariable(null, "Tmrt", DataType.DOUBLE, "time lat lon");
-		tempmrt.addAttribute(new Attribute("long_name", "mean radiant temperature"));
-		tempmrt.addAttribute(new Attribute("units", "degC"));
+		Variable tempmrt=null;
+		if (!disableTmrt)
+		{
+			tempmrt = writer.addVariable(null, "Tmrt", DataType.DOUBLE, "time lat lon");
+			tempmrt.addAttribute(new Attribute("long_name", "mean radiant temperature"));
+			tempmrt.addAttribute(new Attribute("units", "degC"));
+		}
 		
-		Variable utci = writer.addVariable(null, "UTCI", DataType.DOUBLE, "time lat lon");
-		utci.addAttribute(new Attribute("long_name", "UTCI temperature"));
-		utci.addAttribute(new Attribute("units", "degC"));
+		Variable utci=null;
+		if (!disableUTCI)
+		{
+			utci = writer.addVariable(null, "UTCI", DataType.DOUBLE, "time lat lon");
+			utci.addAttribute(new Attribute("long_name", "UTCI temperature"));
+			utci.addAttribute(new Attribute("units", "degC"));
+		}
 		
-		Variable qe = writer.addVariable(null, "Qe", DataType.DOUBLE, "time lat lon");
-		qe.addAttribute(new Attribute("long_name", "Latent heat flux"));
-		qe.addAttribute(new Attribute("units", "W/m2"));
+		Variable qe=null;
+		if (!disableQe)
+		{
+			qe = writer.addVariable(null, "Qe", DataType.DOUBLE, "time lat lon");
+			qe.addAttribute(new Attribute("long_name", "Latent heat flux"));
+			qe.addAttribute(new Attribute("units", "W/m2"));
+		}
 		
-		Variable qh = writer.addVariable(null, "Qh", DataType.DOUBLE, "time lat lon");
-		qh.addAttribute(new Attribute("long_name", "Sensible heat flux"));
-		qh.addAttribute(new Attribute("units", "W/m2"));
+		Variable qh=null;
+		if (!disableQh)
+		{
+			qh = writer.addVariable(null, "Qh", DataType.DOUBLE, "time lat lon");
+			qh.addAttribute(new Attribute("long_name", "Sensible heat flux"));
+			qh.addAttribute(new Attribute("units", "W/m2"));
+		}
 		
-		Variable qg = writer.addVariable(null, "Qg", DataType.DOUBLE, "time lat lon");
-		qg.addAttribute(new Attribute("long_name", "Ground heat flux"));
-		qg.addAttribute(new Attribute("units", "W/m2"));
+		Variable qg=null;
+		if (!disableQg)
+		{
+			qg = writer.addVariable(null, "Qg", DataType.DOUBLE, "time lat lon");
+			qg.addAttribute(new Attribute("long_name", "Ground heat flux"));
+			qg.addAttribute(new Attribute("units", "W/m2"));
+		}
 		
-		Variable rn = writer.addVariable(null, "Rn", DataType.DOUBLE, "time lat lon");
-		rn.addAttribute(new Attribute("long_name", "Net energy"));
-		rn.addAttribute(new Attribute("units", "W/m2"));
+		Variable rn=null;
+		if (!disableRn)
+		{
+			rn = writer.addVariable(null, "Rn", DataType.DOUBLE, "time lat lon");
+			rn.addAttribute(new Attribute("long_name", "Net energy"));
+			rn.addAttribute(new Attribute("units", "W/m2"));
+		}
 		
 		Variable pet = null;
 		if (!disablePet)
@@ -467,13 +523,30 @@ public class NetCdfOutput
 		try
 		{
 			writer.write(airTemp, origin, tempData);
-			writer.write(tempmrt, origin, tmrtData);
-			writer.write(utci, origin, utciData);
-			
-			writer.write(qe, origin, qeData);
-			writer.write(qh, origin, qhData);
-			writer.write(qg, origin, qgData);
-			writer.write(rn, origin, rnData);
+			if (!disableTmrt)
+			{
+				writer.write(tempmrt, origin, tmrtData);
+			}
+			if (!disableUTCI)
+			{
+				writer.write(utci, origin, utciData);
+			}
+			if (!disableQe)
+			{
+				writer.write(qe, origin, qeData);
+			}
+			if (!disableQh)
+			{
+				writer.write(qh, origin, qhData);
+			}
+			if (!disableQg)
+			{
+				writer.write(qg, origin, qgData);
+			}
+			if (!disableRn)
+			{
+				writer.write(rn, origin, rnData);
+			}
 			
 			if (!disableUcan)
 			{

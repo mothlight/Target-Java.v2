@@ -6,9 +6,18 @@ import java.util.Calendar;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.TreeMap;
+
+import com.leelory.suncalc.SunCalc4JavaUtils;
+
+import Simpel.ETo;
+import Simpel.POT;
+import Simpel.SimpelConstants;
+import Simpel.SimpelModelTimestep;
 
 public class TargetModule
 {
+	Common common = new Common();
 	public static boolean DEBUG=true;
 	public int brokenTBRurConverges = 0;
 	TbRurSolverBisectional solver = new TbRurSolverBisectional();
@@ -138,7 +147,8 @@ public class TargetModule
 	private static final int MOD_DATA_VEG_INDEX = 5;
 	private static final int MOD_DATA_DRY_INDEX = 6;
 	private static final int MOD_DATA_IRR_INDEX = 7;
-
+	
+	SimpelModelTimestep simpel = new SimpelModelTimestep();		
 	
 	public static int getSurfIndex(String surf)
 	{
@@ -193,6 +203,38 @@ public class TargetModule
 			double latEdge, double latResolution, double lonEdge, double lonResolution, String outputFile,
 			AccessMetData accessMetData)
 	{
+		String header = "i" 
+				+ "\t" +	"simpelETA" 
+		+ "\t" + "simpelQe" 
+		+ "\t" + "etoValue"
+		+ "\t" + "qeFromETA2"
+		+ "\t" + "storage"
+		+ "\t" + "metKd0"
+				+ "\t" +"water_balance"	
+				+ "\t" +"sum_prec"
+				+ "\t" +"sum_etr"
+				+ "\t" +"sum_runoff"
+				+ "\t" +"init_swe"
+				+ "\t" +"init_stor"
+				+ "\t" +"i_bal"
+				+ "\t" +"content"
+				+ "\t" + "preciptation"
+				+ "\t" + "seepage"
+				+ "\t" + "surface_runoff"
+				+ "\t" + "i_litter"
+				+ "\t" + "i_leaf"
+				+ "\t" + "eta"
+				+ "\t" + "balance_soil"
+				+ "\t" + "et_balance"
+				;
+  		common.writeFile(header,"/tmp/output.csv");
+		
+		
+		String runName = cfm.getValue("run_name");
+		boolean performRewinds = false;
+		boolean inRewind = false;
+		int rewindFrequency = 0;
+		int rewindRerunInterval = 0;
 	    if (cfm.getValue("UrbanPlumberOutput")!=null)
         {
 	    	if (cfm.getValue("UrbanPlumberOutput").equals("Y"))
@@ -201,6 +243,29 @@ public class TargetModule
 	    	}
 	    	
         }
+	    
+	    if (cfm.getValue("rewind")!=null)
+        {
+	    	String rewindCfm = cfm.getValue("rewind").trim();
+	    	System.out.println("rewind=" +rewindCfm);
+	    	String[] rewindSplit=rewindCfm.split(",");
+	    	String rewindFrequencyStr = rewindSplit[0];
+	    	String rewindRerunIntervalStr = rewindSplit[1];
+	    	performRewinds = true;
+	    	rewindFrequency = Integer.parseInt(rewindFrequencyStr);
+	    	rewindRerunInterval = Integer.parseInt(rewindRerunIntervalStr);
+        }
+	    
+	    double irrigationAmount=0.0;
+	    if (cfm.getValue("irrigationAmount")!=null)
+	    {
+	    	irrigationAmount=new Double(cfm.getValue("irrigationAmount")).doubleValue();
+	    }
+	    int irrigationTime=0;
+	    if (cfm.getValue("irrigationTime")!=null)
+	    {
+	    	irrigationTime=new Integer(cfm.getValue("irrigationTime")).intValue();
+	    }
 		
         // # height of reference wind speed measurement (usually 10 m)
         double z_Uref  = Constants.cs_z_URef;   
@@ -229,8 +294,33 @@ public class TargetModule
         if (cfm.getValue("z_TaRef")!=null)
         {
         	z_TaRef=new Double(cfm.getValue("z_TaRef")).doubleValue();
-        }
+        }      
+        
+//    	//# thermal diffusivity (m^2 s^-1)
+//    	public static TreeMap<String,Double> cs_K  = new TreeMap<String,Double>() 
+//    	{{this.put("roof", 0.00000005); this.put("wall", 0.00000005); this.put("road",0.00000038); this.put("watr",0.00000014); this.put("conc",0.00000072); 
+//    	this.put("dry",0.00000021); this.put("irr",0.00000042); this.put("soilW",0.00000063);}};        
+        if (cfm.getValue("cs_K_roof")!=null){ Constants.cs_K.put("roof", new Double(cfm.getValue("cs_K_roof")).doubleValue()); }
+        if (cfm.getValue("cs_K_wall")!=null){ Constants.cs_K.put("wall", new Double(cfm.getValue("cs_K_wall")).doubleValue()); }
+        if (cfm.getValue("cs_K_road")!=null){ Constants.cs_K.put("road", new Double(cfm.getValue("cs_K_road")).doubleValue()); }
+        if (cfm.getValue("cs_K_watr")!=null){ Constants.cs_K.put("watr", new Double(cfm.getValue("cs_K_watr")).doubleValue()); }
+        if (cfm.getValue("cs_K_conc")!=null){ Constants.cs_K.put("conc", new Double(cfm.getValue("cs_K_conc")).doubleValue()); }
+        if (cfm.getValue("cs_K_dry")!=null) { Constants.cs_K.put("dry", new Double(cfm.getValue("cs_K_dry")).doubleValue()); }
+        if (cfm.getValue("cs_K_irr")!=null) { Constants.cs_K.put("irr", new Double(cfm.getValue("cs_K_irr")).doubleValue()); }
+        if (cfm.getValue("cs_K_soilW")!=null) { Constants.cs_K.put("soilW", new Double(cfm.getValue("cs_K_soilW")).doubleValue()); }
 		
+//    	//# heat capacity  (J m^-3 K^-1)
+//    	public static TreeMap<String,Double> cs_C  = new TreeMap<String,Double>() 
+//    	{{this.put("roof", 1250000.); this.put("wall", 1250000.); this.put("road",1940000.); this.put("watr",4180000.); this.put("conc",2110000.); 
+//    	this.put("dry",1350000.); this.put("irr",2190000.); this.put("soilW",3030000.);}};
+        if (cfm.getValue("cs_C_roof")!=null){ Constants.cs_C.put("roof", new Double(cfm.getValue("cs_C_roof")).doubleValue()); }
+        if (cfm.getValue("cs_C_wall")!=null){ Constants.cs_C.put("wall", new Double(cfm.getValue("cs_C_wall")).doubleValue()); }
+        if (cfm.getValue("cs_C_road")!=null){ Constants.cs_C.put("road", new Double(cfm.getValue("cs_C_road")).doubleValue()); }
+        if (cfm.getValue("cs_C_watr")!=null){ Constants.cs_C.put("watr", new Double(cfm.getValue("cs_C_watr")).doubleValue()); }
+        if (cfm.getValue("cs_C_conc")!=null){ Constants.cs_C.put("conc", new Double(cfm.getValue("cs_C_conc")).doubleValue()); }
+        if (cfm.getValue("cs_C_dry")!=null) { Constants.cs_C.put("dry", new Double(cfm.getValue("cs_C_dry")).doubleValue()); }
+        if (cfm.getValue("cs_C_irr")!=null) { Constants.cs_C.put("irr", new Double(cfm.getValue("cs_C_irr")).doubleValue()); }
+        if (cfm.getValue("cs_C_soilW")!=null) { Constants.cs_C.put("soilW", new Double(cfm.getValue("cs_C_soilW")).doubleValue()); }
 		
 		boolean usingAccessMetData = false;
 		int metSize = met_data_all.size();	
@@ -332,11 +422,34 @@ public class TargetModule
 		double[] mod_fm = new double[numberOfTimesteps];
 		double[] mod_cd = new double[numberOfTimesteps];
 		double[] mod_U_TaRef = new double[numberOfTimesteps];
+		
+		//for the first timestep, these are null values, will be set in following timesteps
+		TreeMap<Integer,Double> simpelPreviousTimestepValues = null;
+		
+		int remainingRewindInterval = 0;
 	        
 		long spinUpLong = spinUp.getTime();
         // # begin looping through the met forcing data file
 	    for (int i=0;i<numberOfTimesteps;i++)
-        {       
+        {      
+	    	int previousI = i;
+	    	if (inRewind)
+	    	{
+	    		if (remainingRewindInterval < 1)
+	    		{
+	    			inRewind = false;
+	    		}
+	    		System.out.println(remainingRewindInterval);
+
+	    	} else if (i>0&& performRewinds&& i%rewindFrequency == 0)
+	    	{
+	    		inRewind = true;
+	    		System.out.println("Rewind");
+	    		remainingRewindInterval = rewindRerunInterval;
+	    		i=i-rewindRerunInterval;
+	    	} 
+
+	    	
             if (DEBUG)
             {
             	System.out.print("starting loop " + i + " " );
@@ -359,6 +472,9 @@ public class TargetModule
             
             ArrayList<HashMap<Integer,Double>> mod_rslts =new ArrayList<HashMap<Integer,Double>>();             
             ArrayList<HashMap<Integer,Double>> mod_rslts_tmrt_utci =new ArrayList<HashMap<Integer,Double>>();
+            
+            
+
 	    	
 	    	
 //            if (! (i == metSize-1))
@@ -377,9 +493,7 @@ public class TargetModule
             	// this will be done first to calculate the various fluxes, surfaces, and VFs. 
             	// Then below when it goes through each of the grids, it will load the appropriate data for whatever grid zone each are in
             	for (int zone=0;zone<numberOfForcingGridZones;zone++)
-            	{
-            	
-            	
+            	{   	            	
 	            	if (usingAccessMetData)
 	            	{
 //	            		int loop = i - 1;
@@ -450,7 +564,190 @@ public class TargetModule
 	            	}
 	            	
 
-	            		
+	                // run Simpel for the timestep
+	        		HashMap<Integer,Double> simpelMetInput = new HashMap<Integer,Double>();
+//	        		String[] InputStr = new String[] {"20.1.2021.0","20","0","63.7493333333333","13.49","0.255833333333333","0","0"};
+//	        		simpelMetInput.put(SimpelConstants.INPUT_P, metP0[zone]);
+	        		simpelMetInput.put(SimpelConstants.INPUT_P, 0.0);//oops, this is precipitation, where P in TARGET is pressure
+	        		simpelMetInput.put(SimpelConstants.INPUT_T14, metTa0[zone]);
+	        		simpelMetInput.put(SimpelConstants.INPUT_R14, metRH0[zone]);		
+	        		simpelMetInput.put(SimpelConstants.INPUT_K_DOWN, metKd0[zone]);
+	        		
+	        	    HashMap<Integer,Double> dayMonth = getDayMonth(dte);
+	        	    int doy=(int) Math.round(dayMonth.get(SimpelConstants.INPUT_DOY));
+	        	    int hour=(int) Math.round(dayMonth.get(SimpelConstants.INPUT_HOUR));
+	        		
+	        		simpelMetInput.put(SimpelConstants.INPUT_DOY, dayMonth.get(SimpelConstants.INPUT_DOY));
+	        		simpelMetInput.put(SimpelConstants.INPUT_MONTH, dayMonth.get(SimpelConstants.INPUT_MONTH));
+	        		simpelMetInput.put(SimpelConstants.INPUT_HOUR, dayMonth.get(SimpelConstants.INPUT_HOUR));
+	        		
+	        		System.out.println(dayMonth.get(SimpelConstants.INPUT_HOUR));
+	        		if (dayMonth.get(SimpelConstants.INPUT_HOUR) == irrigationTime) 
+	        		{
+	        			simpelMetInput.put(SimpelConstants.INPUT_IRR, irrigationAmount);
+	        			System.out.println("@@@@@@@@@@@@@@@irrigation=" + irrigationAmount);
+	        		}
+	        		
+	        		//first calculate potential ETO
+	        		double lat=-37.5; //TODO config files
+	        		double lon=145; //TODO config files
+	        		double meridian = 0.0; //TODO config files
+	        		double elevation=93.0; //TODO config files
+	        		double windSpeedHeight = 2.; //TODO config files
+	        		POT pot = new POT();
+	        		
+	        		double windSpeed=metWS0[zone];
+	        		double airTemp=metTa0[zone];
+	        		double radiation=metKd0[zone];
+	        		double dewPoint = pot.computeDewPoint(metRH0[zone], metTa0[zone]);
+	        		double dayOfYear=doy;
+	        		double sunangle = pot.getSunangle(lat,doy);
+	        		
+	       		 	double[] potReturnValues = pot.et_calc(radiation, airTemp, windSpeed, dewPoint, dayOfYear, hour, lat, lon, meridian, elevation, sunangle, windSpeedHeight);
+	       		 	double etoValue = potReturnValues[0];
+	       	       if (etoValue < 0)
+	       	       {
+	       	    	   etoValue = 0;
+	       	       }
+
+//	        		ETo eto = new ETo();
+//	        		POT pot = new POT();
+////	        		Time frequency string of the input and output. The minimum frequency is hours (H) and the maximum is month (M).
+//	        		int freq=ETo.HOURLY;
+////	        		The latitude of the met station (dec deg) 
+//	        		double lat=-37.5;
+////	        		The longitude of the met station (dec deg) (only needed if calculating ETo hourly)
+//	        		double lon=145;
+////	        		The longitude of the center of the time zone (dec deg) (only needed if calculating ETo hourly).
+//	        		double TZ_lon=145;
+////	        		Elevation of the met station above mean sea level (m) 
+//	        		double z_msl=500;
+////	        		The height of the wind speed measurement (m). Default is 2 m.
+//	        		double z_u=2;
+////	        		Wind speed at height z (m/s), set to NaN to calculate
+//	        		double U_z=Double.NaN;
+////	        		Albedo. Should be 0.23 for the reference crop.
+//	        		double alb = 0.23;
+//	        		
+//	        		double esat = eto.esat(metTa0[zone]);
+//	        		double ea= metRH0[zone]/ 100.0 * esat;
+//	        		boolean daytime = true;
+//	        		if (metKd0[zone] < 50)
+//	        		{
+//	        			daytime = false;
+//	        		}
+//	        		double R_s_hourly = metKd0[zone] * 0.0036; // convert from w/m2 to MJ/m2
+//	        		double etoValue = eto.eto_fao_hourly(freq, lat, doy, lon, TZ_lon, z_msl, ea, R_s_hourly, metTa0[zone], z_u, U_z, alb, hour, daytime);
+//	        		
+//	        		double radiation=metKd0[zone];
+//	        		double airTemp=metTa0[zone];
+//	        		double windSpeed=metWS0[zone];
+//	        		double dewPoint = pot.computeDewPoint(metRH0[zone], metTa0[zone]);
+//	        		double dayOfYear=doy;
+//	        		double meridian = 120;
+//	        		double elevation = 18.5;	        		
+////	        		double sunangle = 17.0;
+//	        		double sunangle = SunCalc4JavaUtils.getAzimuth(hour, doy, lat, lon);
+//	        		double windSpeedHeight = 2.;
+//	        		double[] potentialEPT = pot.et_calc(radiation, airTemp, windSpeed, dewPoint, dayOfYear, hour,
+//	       	    		  lat, lon, meridian, elevation, sunangle, windSpeedHeight);
+//	        		double potValue = potentialEPT[0];
+//	        		
+//	        		System.out.println("etovalue="+etoValue + " potValue" + potValue);
+	       	       
+	       	   	TreeMap<String,Double> Soil = (TreeMap<String, Double>) SimpelConstants.Soil.clone();
+	    	   	Soil.put("Timestep",1.);
+	    	   	Soil.put("Field Capacity %",20.);
+	    	   	Soil.put("Permanent Wilting Point %",5.0);
+	    		Soil.put("Start of Reduction %",12.);
+	    		Soil.put("Root Depth",25.);
+	    		Soil.put("Init-Value Soil %",20.);
+	    		Soil.put("Land use",SimpelConstants.landuse_spruce+0.0);
+	    		Soil.put("Minimum LAI",5.);
+	    		Soil.put("Maximum LAI",5.);
+	    		Soil.put("Vegetation Fraction",0.75);
+	    		Soil.put("Layer Thickness",0.35);
+	    		Soil.put("Drainage Coeff. b",3.7);
+	    		Soil.put("Max. Drainage Rate",2.88);
+	    		Soil.put("Cap. Litter",0.);
+	    		Soil.put("Init-Value Litter",0.);
+	    		Soil.put("Litter Reduction factor",3.);
+	    		Soil.put("Direct runoff factor",46.5);		
+	    		Soil.put("Glugla coeff.",100.);
+	        		
+	        		double[][] simpelReturnValues = simpel.SIMPLE_function(simpelMetInput, SimpelConstants.Landuse, SimpelConstants.LAI_model, 
+	        				Soil, simpelPreviousTimestepValues, etoValue);    	
+//	        		double[][] simpelReturnValues = simpel.SIMPLE_function(simpelMetInput, SimpelConstants.Landuse, SimpelConstants.LAI_model, 
+//	        				SimpelConstants.Soil, simpelPreviousTimestepValues);    	
+	        		simpelPreviousTimestepValues = simpel.setPreviousValues(simpelReturnValues);
+	        		
+	        		double water_balance = simpelReturnValues[0][SimpelConstants.WATER_BALANCE];
+	        		double sum_prec = simpelReturnValues[0][SimpelConstants.SUM_PREC];
+	        		double sum_etr = simpelReturnValues[0][SimpelConstants.SUM_ETR];
+	        		double sum_runoff = simpelReturnValues[0][SimpelConstants.SUM_RUNOFF];
+	        		double init_swe = simpelReturnValues[0][SimpelConstants.INIT_SWE];
+	        		double init_stor = simpelReturnValues[0][SimpelConstants.INIT_STOR];
+	        		double snow_water_equi = simpelReturnValues[0][SimpelConstants.SNOW_WATER_EQUI];   		  
+	        		double i_bal = simpelReturnValues[0][SimpelConstants.I_BAL];   	
+	        		double content = simpelReturnValues[0][SimpelConstants.CONTENT];   	
+	        		double precipitation = simpelReturnValues[0][SimpelConstants.PRECIPITATION];
+	        		double seepage = simpelReturnValues[0][SimpelConstants.SEEPAGE];
+	        		double surface_runoff = simpelReturnValues[0][SimpelConstants.SURFACE_RUNOFF];
+	        		double balance_soil = simpelReturnValues[0][SimpelConstants.BALANCE_SOIL];
+	        		double et_balance = simpelReturnValues[0][SimpelConstants.ET_BALANCE];
+	        		
+	        		double simpelETA = simpelReturnValues[0][SimpelConstants.ETA_TOTAL];
+	        		double storage = simpelReturnValues[0][SimpelConstants.STORAGE];
+	        		double simpelQe = simpel.qeFromETA2(simpelETA);
+//	        		String output = "ETA " + common.roundToDecimals(simpelETA,4 ) 
+//    				+ "\tQe " + common.roundToDecimals(simpelQe,4) 
+//    				+ "\tETO " + common.roundToDecimals(etoValue,4)
+//    				+ "\tETOQe " + common.roundToDecimals(simpel.qeFromETA2(etoValue),2)
+//    				+ "\tstorage " + common.roundToDecimals(storage,2)
+//    				+ "\tKdown " + metKd0[zone];
+//	        		System.out.println(
+//	        				output
+//	        				
+//	        				) ;
+	        		 
+	        		double i_litter = simpelReturnValues[0][SimpelConstants.I_LITTER];
+	        		double i_leaf = simpelReturnValues[0][SimpelConstants.I_LEAF];
+	        		double eta = simpelReturnValues[0][SimpelConstants.ETA];
+
+	        		String output2 =  i 
+	        				+ "\t" +	common.roundToDecimals(simpelETA,4 ) 
+    				+ "\t" + common.roundToDecimals(simpelQe,4) 
+    				+ "\t" + common.roundToDecimals(etoValue,4)
+    				+ "\t" + common.roundToDecimals(simpel.qeFromETA2(etoValue),2)
+    				+ "\t" + common.roundToDecimals(storage,2)
+    				+ "\t" + metKd0[zone]
+    						+ "\t" +water_balance	
+    						+ "\t" +sum_prec
+    						+ "\t" +sum_etr
+    						+ "\t" +sum_runoff
+    						+ "\t" +init_swe
+    						+ "\t" +init_stor
+    						+ "\t" +i_bal
+    						+ "\t" +content
+    						+ "\t" + precipitation
+    						+ "\t" + seepage
+    						+ "\t" + surface_runoff
+    						+ "\t" + i_litter
+    						+ "\t" + i_leaf
+    						+ "\t" + eta
+    						+ "\t" + balance_soil
+    						+ "\t" + et_balance
+    						;
+	        		System.out.println(output2);
+	        		common.appendFile(output2,"/tmp/output.csv");
+	        		//TODO 
+//	        		simpelQe = Double.NaN;
+//	        		simpelQe=0;
+	        		
+//	        		System.out.println("Qe="+simpelQe);
+	        		
+	        		// end Simpel	
+//	        		System.exit(1);
 	                
 
 	                //############ Met variables for each time step (generate dataframe) ##########
@@ -471,17 +768,25 @@ public class TargetModule
 	                	ref_surf2=cfm.getValue("ref_surf2").trim();	                	
 	                }
 	                
+//TODO set  mod_data_ts_[i-3][9][getSurfIndex(ref_surf2)][zone], mod_data_ts_[i-2][9][getSurfIndex(ref_surf2)][zone], mod_data_ts_[i-1][9][getSurfIndex(ref_surf2)][zone]   to Ta        
+	                if (inRewind && remainingRewindInterval == rewindRerunInterval)
+	                {
+		                mod_data_ts_[previousI-1][9][getSurfIndex(ref_surf2)][zone]=metTa0[0];
+		                mod_data_ts_[previousI-2][9][getSurfIndex(ref_surf2)][zone]=metTa0[0];
+		                mod_data_ts_[previousI-3][9][getSurfIndex(ref_surf2)][zone]=metTa0[0];
+	                }
+	                
 	                //## radiation balance
 	                
-	                ArrayList<Double> prevTsRef1 = new ArrayList<Double>();	
+//	                ArrayList<Double> prevTsRef1 = new ArrayList<Double>();	  //KN, Feb 22,2022, took this out, doesn't seem to be used
 	                ArrayList<Double> prevTsRef2 = new ArrayList<Double>();	
-	                ArrayList<Double> prevTmRefForce1 = new ArrayList<Double>();
+//	                ArrayList<Double> prevTmRefForce1 = new ArrayList<Double>();  //KN, Feb 22,2022, took this out, doesn't seem to be used
 	                ArrayList<Double> prevTmRefForce2 = new ArrayList<Double>();
 	                if (i < 1)
 	                {
-		                prevTsRef1.add(0.);
-		                prevTsRef1.add(0.);
-		                prevTsRef1.add(0.);
+//		                prevTsRef1.add(0.);
+//		                prevTsRef1.add(0.);
+//		                prevTsRef1.add(0.);
 		                
 		                prevTsRef2.add(0.);
 		                prevTsRef2.add(0.);
@@ -489,9 +794,9 @@ public class TargetModule
 	                }
 	                else if (i < 2)
 	                {
-	                	prevTsRef1.add(mod_data_ts_[i-1][9][getSurfIndex(ref_surf)][zone]);
-		                prevTsRef1.add(0.);
-		                prevTsRef1.add(0.);
+//	                	prevTsRef1.add(mod_data_ts_[i-1][9][getSurfIndex(ref_surf)][zone]);
+//		                prevTsRef1.add(0.);
+//		                prevTsRef1.add(0.);
 		                
 		                prevTsRef2.add(mod_data_ts_[i-1][9][getSurfIndex(ref_surf2)][zone]);
 		                prevTsRef2.add(0.);
@@ -499,9 +804,9 @@ public class TargetModule
 	                }
 	                else if (i < 3)
 	                {
-	                	prevTsRef1.add(mod_data_ts_[i-1][9][getSurfIndex(ref_surf)][zone]);
-	                	prevTsRef1.add(mod_data_ts_[i-2][9][getSurfIndex(ref_surf)][zone]);
-		                prevTsRef1.add(0.);
+//	                	prevTsRef1.add(mod_data_ts_[i-1][9][getSurfIndex(ref_surf)][zone]);
+//	                	prevTsRef1.add(mod_data_ts_[i-2][9][getSurfIndex(ref_surf)][zone]);
+//		                prevTsRef1.add(0.);
 		                
 		                prevTsRef2.add(mod_data_ts_[i-1][9][getSurfIndex(ref_surf2)][zone]);
 		                prevTsRef2.add(mod_data_ts_[i-2][9][getSurfIndex(ref_surf2)][zone]);
@@ -509,14 +814,23 @@ public class TargetModule
 	                }
 	                else
 	                {
-		                prevTsRef1.add(mod_data_ts_[i-1][9][getSurfIndex(ref_surf)][zone]);
-		                prevTsRef1.add(mod_data_ts_[i-2][9][getSurfIndex(ref_surf)][zone]);
-		                prevTsRef1.add(mod_data_ts_[i-3][9][getSurfIndex(ref_surf)][zone]);
+//		                prevTsRef1.add(mod_data_ts_[i-1][9][getSurfIndex(ref_surf)][zone]);
+//		                prevTsRef1.add(mod_data_ts_[i-2][9][getSurfIndex(ref_surf)][zone]);
+//		                prevTsRef1.add(mod_data_ts_[i-3][9][getSurfIndex(ref_surf)][zone]);
 		                
 		                prevTsRef2.add(mod_data_ts_[i-1][9][getSurfIndex(ref_surf2)][zone]);
 		                prevTsRef2.add(mod_data_ts_[i-2][9][getSurfIndex(ref_surf2)][zone]);
 		                prevTsRef2.add(mod_data_ts_[i-3][9][getSurfIndex(ref_surf2)][zone]);
 	                }
+//TODO rewind 
+	                if (inRewind && remainingRewindInterval == rewindRerunInterval)
+	                {
+	                	prevTsRef2 = new ArrayList<Double>();	
+	                	prevTsRef2.add(metTa0[0]);
+	                	prevTsRef2.add(metTa0[0]);
+	                	prevTsRef2.add(metTa0[0]);
+	                }
+	                
 	                // # creates dictionary with radiation variables for current timestep and surface type  
 	                HashMap<String,Double> rad_rur2  = rnCalcNew.rn_calc_new(cfm,metKd0[zone],metLD0[zone],metKdPlus1[zone],metLDPlus1[zone],metKdMinus1[zone],metLDMinus1[zone], ref_surf2,Dats,prevTsRef2,1.0);                            
 	                //##################### ENG BALANCE for "reference" site #######################
@@ -525,20 +839,31 @@ public class TargetModule
 	                //##################### CALC LST for "reference" site #########################
 	                if (i < 1)
 	                {
-		                prevTmRefForce1.add(0.);	                
+//		                prevTmRefForce1.add(0.);	                
 		                prevTmRefForce2.add(0.);
 	                }
 	                else
 	                {
-		                prevTmRefForce1.add(mod_data_tm_[i-1][9][getSurfIndex(ref_surf)][zone]);	                
+//		                prevTmRefForce1.add(mod_data_tm_[i-1][9][getSurfIndex(ref_surf)][zone]);	                
 		                prevTmRefForce2.add(mod_data_tm_[i-1][9][getSurfIndex(ref_surf2)][zone]);
+	                }
+	                
+//TODO set prevTmRefForce2 to 0 if just starting a rewind	
+	                if (inRewind && remainingRewindInterval == rewindRerunInterval)
+	                {
+	                	prevTmRefForce2 = new ArrayList<Double>();
+	                	prevTmRefForce2.add(metTa0[0]);
 	                }
 	
 	                HashMap<String,Double> Ts_stfs_rur2 =forceRestore.Ts_calc_surf(eng_bals_rur2,cfm,prevTsRef2,prevTmRefForce2, Dats,ref_surf2,i);   // # creates dictionary with surface temperature for current timestep and surface type  
 	                
 	                double Ts_stfs_rur = Ts_stfs_rur2.get(ForceRestore.TS_KEY); 
 	                
-	            
+//TODO set Ts_stfs_rur to Ta if just starting a rewind
+	                if (inRewind && remainingRewindInterval == rewindRerunInterval)
+	                {
+	                	Ts_stfs_rur=metTa0[0];
+	                }
 	  
 	                // # surface temperature at rural (reference) site
 	                double Tlow_surf = Ts_stfs_rur ;      
@@ -650,6 +975,12 @@ public class TargetModule
 	        	                {
 	        	                	prevTmRefForce.add(mod_data_tm_[i-1][9][getSurfIndex(surf)][zone]);
 	        	                }
+//TODO rewind reset
+	        	                if (inRewind && remainingRewindInterval == rewindRerunInterval)
+	        	                {
+	        	                	prevTmRefForce = new ArrayList<Double>();
+	        	                	prevTmRefForce.add(metTa0[0]);
+	        	                }
 	        	                
 	        	                HashMap<String,Double> rad = rnCalcNew.rn_calc_new(cfm,metKd0[zone],metLD0[zone],metKdPlus1[zone],metLDPlus1[zone],metKdMinus1[zone],metLDMinus1[zone],
 	        	                		surf,Dats,prevTsRef,svfg); 
@@ -669,7 +1000,17 @@ public class TargetModule
 	                    
 	                    		// # creates dictionary with radiation variables for current timestep and surface type                             
 	                            //##################### ENG BALANCE non-water #######################
-	                    		HashMap<String,Double> eng_bals=lumps.lumps(rad,cfm,metTa0[zone],metP0[zone],surf,Dats);            
+//	                    		HashMap<String,Double> eng_bals=lumps.lumps(rad,cfm,metTa0[zone],metP0[zone],surf,Dats);    
+	        	                HashMap<String,Double> eng_bals;
+	                    		
+	                    		if (surf.equals( IRR_KEY) )
+	                    		{
+	                    			eng_bals=lumps.lumps(rad,cfm,metTa0[zone],metP0[zone],surf,Dats,simpelQe);   
+	                    		}
+	                    		else
+	                    		{
+	                    			eng_bals=lumps.lumps(rad,cfm,metTa0[zone],metP0[zone],surf,Dats);   
+	                    		}
 	                            // # creates dictionary with energy balance for current timestep and surface type
 	                            //##################### CALC LST non-water #########################
 	
@@ -734,6 +1075,14 @@ public class TargetModule
 		        	                prevTsRef.add(mod_data_ts_[i-2][9][getSurfIndex(surf)][zone]);
 		        	                prevTsRef.add(mod_data_ts_[i-3][9][getSurfIndex(surf)][zone]);
 	                        	}
+//TODO rewind
+	                            if (inRewind && remainingRewindInterval == rewindRerunInterval)
+	        	                {
+	                            	prevTsRef = new ArrayList<Double>();	
+		                        	prevTsRef.add(metTa0[0]);
+		                        	prevTsRef.add(metTa0[0]);
+		                        	prevTsRef.add(metTa0[0]);
+	        	                }
 	                        	
 	                        	HashMap<String,Double> rad  = rnCalcNew.rn_calc_new(cfm,metKd0[zone],metLD0[zone],metKdPlus1[zone],metLDPlus1[zone],metKdMinus1[zone],metLDMinus1[zone],
 	                        			surf,Dats,prevTsRef,svfg);  
@@ -893,7 +1242,7 @@ public class TargetModule
 //		                double aveKu = getAverage(mod_data_ku_, i, savedFractions);
 //		                double aveLd = getAverage(mod_data_ld_, i, savedFractions);
 //		                double aveLu = getAverage(mod_data_lu_, i, savedFractions);
-	                double aveQe = getAverage(mod_data_qe_, savedFractions,zone);
+	                double aveQe = getQeValue(mod_data_qe_, savedFractions,zone);
 	                double aveQh = getAverage(mod_data_qh_, savedFractions,zone);
 	                double aveQg = getAverage(mod_data_qg_, savedFractions,zone);
 	                double aveRn = getAverage(mod_data_rn_, savedFractions,zone);		               
@@ -950,40 +1299,48 @@ public class TargetModule
 //	                			 + " " + Tac + " " + metRH0 + " " + Ucan + " " + metKd0 + " " + Tsurf_can + " " + metLD0 + " " + yd_actual + " " + TM + " " + lat);
 //	                    System.exit(1);
 	                	
-	                	
-	                	
-	                	
 	          
                 }
                 
-
-                if (urbanPlumberOut)
+                //don't output if spinning up from rewind
+                if (inRewind)
+                {}
+                else
                 {
-                    UrbanPlumberOutput u = new UrbanPlumberOutput();
-                    u.output(cfm.getValue("output_dir"), mod_rslts_tmrt_utci,mod_rslts,i, x, y, simulationStartTimeLong, tmstpInt, //met0
-                		 	 metTa0 ,
-                			 metKd0 ,
-                			 metWS0 ,
-                			 metRH0 ,
-                			 metLD0 ,
-                			 metP0 
-                    		);
+                    if (urbanPlumberOut)
+                    {
+                        UrbanPlumberOutput u = new UrbanPlumberOutput();
+                        u.output(cfm.getValue("output_dir"), mod_rslts_tmrt_utci,mod_rslts,i, x, y, simulationStartTimeLong, tmstpInt, //met0
+                    		 	 metTa0 ,
+                    			 metKd0 ,
+                    			 metWS0 ,
+                    			 metRH0 ,
+                    			 metLD0 ,
+                    			 metP0 
+                    			 ,runName
+                        		);
+                    }
                 }
-
-                
                 
                 previousTacValues.add(timestepsTacValues);
                 NetCdfOutput netCdfOutput = new NetCdfOutput();
                 netCdfOutput.setDisabled(disableOutput);
                 netCdfOutput.setIndividualNetcdfFiles(individualNetcdfFiles);
                 netCdfOutput.setSimulationStartTimeLong(simulationStartTimeLong);
-                netCdfOutput.outputNetcdf2(outputFile, x, y, mod_rslts, mod_rslts_tmrt_utci,i,tmstpInt,spinUpDateStr,
-                		latEdge, latResolution, lonEdge, lonResolution);
+                
+                //don't output if spinning up from rewind
+                if (inRewind)
+                {}
+                else
+                {
+                	 netCdfOutput.outputNetcdf2(outputFile, x, y, mod_rslts, mod_rslts_tmrt_utci,i,tmstpInt,spinUpDateStr, latEdge, latResolution, lonEdge, lonResolution);
+                }               
                 netCdfOutput = null;
 
                 //GISOutput gisOut = new GISOutput();
                 //gisOut.output(cfm.getValue("output_dir"), mod_rslts_tmrt_utci, mod_rslts, i, simulationStartTimeLong, tmstpInt, latLontoLCMap);
-            }	            
+            }	   
+            remainingRewindInterval--;
         }	                        
 	}                 
 
@@ -1060,6 +1417,47 @@ public class TargetModule
         return average;
 		
 	}
+	
+	//Qe is only on irrigated grass.
+	public double getQeValue(double[][][] dataItem, double[] surfaceFractions, int zone)
+	{
+		double total = 0.0;
+		double count = 0.0;
+		double average;
+        int savedFg =(int) Math.round( surfaceFractions[saved_fg]);
+
+        for (int surfLoop = 0;surfLoop<surfs.size();surfLoop++)
+        {
+        	String surf = surfs.get(surfLoop);
+        	int surfIndex = getSurfIndex(surf);
+        	if (
+        			surfIndex == MOD_DATA_IRR_INDEX
+//        			|| surfIndex == MOD_DATA_DRY_INDEX
+//        			|| surfIndex == MOD_DATA_VEG_INDEX
+//        			|| surfIndex == MOD_DATA_CONC_INDEX
+//        			|| surfIndex == MOD_DATA_WATR_INDEX
+//        			|| surfIndex == MOD_DATA_ROAD_INDEX
+//        			|| surfIndex == MOD_DATA_ROOF_INDEX
+//        			|| surfIndex == MOD_DATA_ROOF_INDEX
+        			)
+        	{}
+        	else
+        	{
+        		continue;
+        	}
+
+        	double surfaceFraction = surfaceFractions[surfIndex]*100.0;
+        	surfaceFraction = 100.0;
+        	double value = dataItem[savedFg][surfIndex][zone];
+        	count = count + surfaceFraction;
+        	total = total + (value*surfaceFraction) ;
+//        	System.out.println(surf + " " + value + " " + (value*surfaceFraction) + " " + " " + surfaceFraction);
+        }
+        average = total / count;
+//        System.out.println("average="+average);
+        return average;
+		
+	}
 
 	
 public HashMap<Integer,Double> calcLoop(ArrayList<ArrayList<Double>> lc_data,int grid,int i,double metTa0, double metWS0, double metP0,
@@ -1091,8 +1489,7 @@ public HashMap<Integer,Double> calcLoop(ArrayList<ArrayList<Double>> lc_data,int
     {
         mod_data_ts_[i][9][getSurfIndex("Veg")][zone] = metTa0;
     }
-            
-    
+        
     //### below various land cover dictionaries are defined.
     LC  = (ArrayList<Double>) lc_stuff.get(LcSort.LC_KEY);    
     //  # all surfaces not averaged (can be > 1.0)
@@ -1174,7 +1571,7 @@ public HashMap<Integer,Double> calcLoop(ArrayList<ArrayList<Double>> lc_data,int
     HashMap<String,Double> httcReturn = httc.httc(Ri_urb_new,Uz,z_Hx2-H-z0m_urb,z0m_urb,z0h_urb,metTa0,metP0,Tac_can_roof,Tb_rur); 
     
     double httc_urb_new =  httcReturn.get(Httc.HTTC_KEY);  
-
+    
     //## calculate Tsurf of the canyon... this inclues walls
     double Tsurf_can  = (mod_data_ts_[i][9][roofIndex][zone]*LC.get(LCData.roof)) 
     		+ (mod_data_ts_[i][fg][concIndex][zone]*LC.get(LCData.conc)) 
@@ -1195,7 +1592,9 @@ public HashMap<Integer,Double> calcLoop(ArrayList<ArrayList<Double>> lc_data,int
     		+  (mod_data_ts_[i][fg][irrIndex][zone]*LcH.get(LCData.irr)) 
     		+ (mod_data_ts_[i][9][VegIndex][zone]*LcH.get(LCData.Veg));
     double Tsurf_wall = mod_data_ts_[i][fw][wallIndex][zone];
-     
+    
+ 
+    
 //    ################################################
 //                    ## calculate the canopy air temperature (Tac)  ##
 //    ################################################
@@ -1290,9 +1689,7 @@ public HashMap<Integer,Double> calcLoop(ArrayList<ArrayList<Double>> lc_data,int
 //            int fg   = (int) lc_stuff.get(LcSort.fg_KEY);   
             double[] fractionsToSave = new double[]{LCWall,LCRoof,LCRoad,LCWatr,LCConc,LCVeg,LCDry,LCIrr,svfwA,svfgA,fg};
         	savedSVFandLCFractions.put(grid, fractionsToSave);	
-        }
-        
-        
+        }        
     return for_tab;
 }
 
@@ -1312,6 +1709,36 @@ public void setOutputDirectory(String outputDirectory)
 	this.outputDirectory = outputDirectory;
 }
         
+public HashMap<Integer,Double> getDayMonth(Date simulationCurrentDate)
+{
+	
+////	int timeIdx = i;
+//	int minutes = (int)timestep / 60;
+//	long minutesDelta = minutes * timeIdx;
+//	long currentSimulationTime = simulationStartTimeLong + (minutesDelta*60L*1000L);
+//	
+//	Date simulationCurrentDate = new Date(currentSimulationTime);
+    Calendar calendar = Calendar.getInstance();
+    calendar.setTime(simulationCurrentDate);
+    
+    int day = calendar.get(Calendar.DAY_OF_MONTH);
+//    String dayStr = common.padLeft(day+"", 2, '0');
+    int month = calendar.get(Calendar.MONTH) + 1;
+//    String monthStr = common.padLeft(month+"", 2, '0');
+//    int year = calendar.get(Calendar.YEAR);
+    int hour = calendar.get(Calendar.HOUR_OF_DAY);
+//    String hourStr = common.padLeft(hour, 2, '0');
+    int minute = calendar.get(Calendar.MINUTE);
+//    String minuteStr = common.padLeft(minute, 2, '0');
+    int dayOfYear = calendar.get(Calendar.DAY_OF_YEAR);
+    	
+    HashMap<Integer,Double> dayMonth = new HashMap<Integer,Double>();
+    dayMonth.put(SimpelConstants.INPUT_DOY, dayOfYear*1.0);
+    dayMonth.put(SimpelConstants.INPUT_MONTH, month*1.0);
+    dayMonth.put(SimpelConstants.INPUT_HOUR, hour*1.0);
+    return dayMonth;
+    
+}
 
          		      
 	
