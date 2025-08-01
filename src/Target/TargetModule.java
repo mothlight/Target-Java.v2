@@ -14,6 +14,7 @@ import Simpel.ETo;
 import Simpel.POT;
 import Simpel.SimpelConstants;
 import Simpel.SimpelModelTimestep;
+import Simpel.SimpelSurface;
 
 public class TargetModule
 {
@@ -148,7 +149,9 @@ public class TargetModule
 	private static final int MOD_DATA_DRY_INDEX = 6;
 	private static final int MOD_DATA_IRR_INDEX = 7;
 	
-	SimpelModelTimestep simpel = new SimpelModelTimestep();		
+//	SimpelModelTimestep simpel = new SimpelModelTimestep();		
+	SimpelSurface irrigatedGrassSimpelSurface = new SimpelSurface();
+
 	
 	public static int getSurfIndex(String surf)
 	{
@@ -203,6 +206,38 @@ public class TargetModule
 			double latEdge, double latResolution, double lonEdge, double lonResolution, String outputFile,
 			AccessMetData accessMetData)
 	{
+		
+		String tmstp = cfm.getValue("timestep");                            
+		// # time step (seconds)
+		int tmstpInt = new Integer( tmstp.replaceAll("S", "").replaceAll("'", "") ).intValue();
+		double timestep = tmstpInt/60.0/60.0;
+		double fieldCapacityPercent=cfm.getDoubleValue("fieldCapacityPercent");
+		double permanentWiltingPointPercent = cfm.getDoubleValue("permanentWiltingPointPercent");
+		double startOfReductionPercent=cfm.getDoubleValue("startOfReductionPercent");
+		double rootDepth=cfm.getDoubleValue("rootDepth");
+		double initValueSoilPercent=cfm.getDoubleValue("initValueSoilPercent");
+		double landuse = cfm.getDoubleValue("landuse");
+		double minLAI = cfm.getDoubleValue("minLAI");
+		double maxLAI= cfm.getDoubleValue("maxLAI");
+		double vegetationFraction = cfm.getDoubleValue("vegetationFraction");
+		double layerThickness = cfm.getDoubleValue("layerThickness");
+		double drainageCoeff=cfm.getDoubleValue("drainageCoeff");
+		double maxDrainageRate=cfm.getDoubleValue("maxDrainageRate");
+		double capLitter = cfm.getDoubleValue("capLitter");
+		double initValueLitter=cfm.getDoubleValue("initValueLitter");
+		double litterReductionFactor = cfm.getDoubleValue("litterReductionFactor");
+		double directRunoffFactor=cfm.getDoubleValue("directRunoffFactor");
+		double gluglaCoeff=cfm.getDoubleValue("gluglaCoeff");
+		double latOfSurface=latEdge; 
+		double lonOfSurface=lonEdge; 
+		double meridian = cfm.getDoubleValue("meridian");
+		double elevation=cfm.getDoubleValue("elevation");
+		double windSpeedHeight = cfm.getDoubleValue("windSpeedHeight");
+		irrigatedGrassSimpelSurface.initSurface(latOfSurface, lonOfSurface, meridian, elevation, windSpeedHeight, timestep, fieldCapacityPercent, permanentWiltingPointPercent, 
+				startOfReductionPercent, rootDepth, initValueSoilPercent, landuse, minLAI, maxLAI, vegetationFraction, layerThickness, 
+				drainageCoeff, maxDrainageRate, capLitter, initValueLitter, litterReductionFactor, directRunoffFactor, 
+				gluglaCoeff);
+		
 		String header = "i" 
 				+ "\t" +	"simpelETA" 
 		+ "\t" + "simpelQe" 
@@ -356,9 +391,9 @@ public class TargetModule
 		}
 		
 		// # model run name 
-		String tmstp = cfm.getValue("timestep");                            
+//		String tmstp = cfm.getValue("timestep");                            
 		// # time step (minutes)
-		int tmstpInt = new Integer( tmstp.replaceAll("S", "").replaceAll("'", "") ).intValue();
+//		int tmstpInt = new Integer( tmstp.replaceAll("S", "").replaceAll("'", "") ).intValue();
 //	    ######### DEFINE START AND FINISH DATES HERE ########
 		// this variable is now called SpinUp in the config file
 //		Date spinUp = cfm.getDateValue("SpinUp");
@@ -424,7 +459,7 @@ public class TargetModule
 		double[] mod_U_TaRef = new double[numberOfTimesteps];
 		
 		//for the first timestep, these are null values, will be set in following timesteps
-		TreeMap<Integer,Double> simpelPreviousTimestepValues = null;
+//		TreeMap<Integer,Double> simpelPreviousTimestepValues = null;
 		
 		int remainingRewindInterval = 0;
 	        
@@ -563,192 +598,194 @@ public class TargetModule
 		            	}
 	            	}
 	            	
-
-	                // run Simpel for the timestep
-	        		HashMap<Integer,Double> simpelMetInput = new HashMap<Integer,Double>();
-//	        		String[] InputStr = new String[] {"20.1.2021.0","20","0","63.7493333333333","13.49","0.255833333333333","0","0"};
-//	        		simpelMetInput.put(SimpelConstants.INPUT_P, metP0[zone]);
-	        		simpelMetInput.put(SimpelConstants.INPUT_P, 0.0);//oops, this is precipitation, where P in TARGET is pressure
-	        		simpelMetInput.put(SimpelConstants.INPUT_T14, metTa0[zone]);
-	        		simpelMetInput.put(SimpelConstants.INPUT_R14, metRH0[zone]);		
-	        		simpelMetInput.put(SimpelConstants.INPUT_K_DOWN, metKd0[zone]);
-	        		
-	        	    HashMap<Integer,Double> dayMonth = getDayMonth(dte);
-	        	    int doy=(int) Math.round(dayMonth.get(SimpelConstants.INPUT_DOY));
-	        	    int hour=(int) Math.round(dayMonth.get(SimpelConstants.INPUT_HOUR));
-	        		
-	        		simpelMetInput.put(SimpelConstants.INPUT_DOY, dayMonth.get(SimpelConstants.INPUT_DOY));
-	        		simpelMetInput.put(SimpelConstants.INPUT_MONTH, dayMonth.get(SimpelConstants.INPUT_MONTH));
-	        		simpelMetInput.put(SimpelConstants.INPUT_HOUR, dayMonth.get(SimpelConstants.INPUT_HOUR));
-	        		
-	        		System.out.println(dayMonth.get(SimpelConstants.INPUT_HOUR));
-	        		if (dayMonth.get(SimpelConstants.INPUT_HOUR) == irrigationTime) 
-	        		{
-	        			simpelMetInput.put(SimpelConstants.INPUT_IRR, irrigationAmount);
-	        			System.out.println("@@@@@@@@@@@@@@@irrigation=" + irrigationAmount);
-	        		}
-	        		
-	        		//first calculate potential ETO
-	        		double lat=-37.5; //TODO config files
-	        		double lon=145; //TODO config files
-	        		double meridian = 0.0; //TODO config files
-	        		double elevation=93.0; //TODO config files
-	        		double windSpeedHeight = 2.; //TODO config files
-	        		POT pot = new POT();
-	        		
-	        		double windSpeed=metWS0[zone];
-	        		double airTemp=metTa0[zone];
-	        		double radiation=metKd0[zone];
-	        		double dewPoint = pot.computeDewPoint(metRH0[zone], metTa0[zone]);
-	        		double dayOfYear=doy;
-	        		double sunangle = pot.getSunangle(lat,doy);
-	        		
-	       		 	double[] potReturnValues = pot.et_calc(radiation, airTemp, windSpeed, dewPoint, dayOfYear, hour, lat, lon, meridian, elevation, sunangle, windSpeedHeight);
-	       		 	double etoValue = potReturnValues[0];
-	       	       if (etoValue < 0)
-	       	       {
-	       	    	   etoValue = 0;
-	       	       }
-
-//	        		ETo eto = new ETo();
-//	        		POT pot = new POT();
-////	        		Time frequency string of the input and output. The minimum frequency is hours (H) and the maximum is month (M).
-//	        		int freq=ETo.HOURLY;
-////	        		The latitude of the met station (dec deg) 
-//	        		double lat=-37.5;
-////	        		The longitude of the met station (dec deg) (only needed if calculating ETo hourly)
-//	        		double lon=145;
-////	        		The longitude of the center of the time zone (dec deg) (only needed if calculating ETo hourly).
-//	        		double TZ_lon=145;
-////	        		Elevation of the met station above mean sea level (m) 
-//	        		double z_msl=500;
-////	        		The height of the wind speed measurement (m). Default is 2 m.
-//	        		double z_u=2;
-////	        		Wind speed at height z (m/s), set to NaN to calculate
-//	        		double U_z=Double.NaN;
-////	        		Albedo. Should be 0.23 for the reference crop.
-//	        		double alb = 0.23;
+//
+//	                // run Simpel for the timestep
+//	        		HashMap<Integer,Double> simpelMetInput = new HashMap<Integer,Double>();
+////	        		String[] InputStr = new String[] {"20.1.2021.0","20","0","63.7493333333333","13.49","0.255833333333333","0","0"};
+////	        		simpelMetInput.put(SimpelConstants.INPUT_P, metP0[zone]);
+//	        		simpelMetInput.put(SimpelConstants.INPUT_P, 0.0);//oops, this is precipitation, where P in TARGET is pressure
+//	        		simpelMetInput.put(SimpelConstants.INPUT_T14, metTa0[zone]);
+//	        		simpelMetInput.put(SimpelConstants.INPUT_R14, metRH0[zone]);		
+//	        		simpelMetInput.put(SimpelConstants.INPUT_K_DOWN, metKd0[zone]);
 //	        		
-//	        		double esat = eto.esat(metTa0[zone]);
-//	        		double ea= metRH0[zone]/ 100.0 * esat;
-//	        		boolean daytime = true;
-//	        		if (metKd0[zone] < 50)
+//	        	    HashMap<Integer,Double> dayMonth = getDayMonth(dte);
+//	        	    int doy=(int) Math.round(dayMonth.get(SimpelConstants.INPUT_DOY));
+//	        	    int hour=(int) Math.round(dayMonth.get(SimpelConstants.INPUT_HOUR));
+//	        		
+//	        		simpelMetInput.put(SimpelConstants.INPUT_DOY, dayMonth.get(SimpelConstants.INPUT_DOY));
+//	        		simpelMetInput.put(SimpelConstants.INPUT_MONTH, dayMonth.get(SimpelConstants.INPUT_MONTH));
+//	        		simpelMetInput.put(SimpelConstants.INPUT_HOUR, dayMonth.get(SimpelConstants.INPUT_HOUR));
+//	        		
+//	        		System.out.println(dayMonth.get(SimpelConstants.INPUT_HOUR));
+//	        		if (dayMonth.get(SimpelConstants.INPUT_HOUR) == irrigationTime) 
 //	        		{
-//	        			daytime = false;
+//	        			simpelMetInput.put(SimpelConstants.INPUT_IRR, irrigationAmount);
+//	        			System.out.println("@@@@@@@@@@@@@@@irrigation=" + irrigationAmount);
 //	        		}
-//	        		double R_s_hourly = metKd0[zone] * 0.0036; // convert from w/m2 to MJ/m2
-//	        		double etoValue = eto.eto_fao_hourly(freq, lat, doy, lon, TZ_lon, z_msl, ea, R_s_hourly, metTa0[zone], z_u, U_z, alb, hour, daytime);
 //	        		
-//	        		double radiation=metKd0[zone];
-//	        		double airTemp=metTa0[zone];
+//	        		//first calculate potential ETO
+//	        		double lat=-37.5; //TODO config files
+//	        		double lon=145; //TODO config files
+//	        		double meridian = 0.0; //TODO config files
+//	        		double elevation=93.0; //TODO config files
+//	        		double windSpeedHeight = 2.; //TODO config files
+//	        		POT pot = new POT();
+//	        		
 //	        		double windSpeed=metWS0[zone];
+//	        		double airTemp=metTa0[zone];
+//	        		double radiation=metKd0[zone];
 //	        		double dewPoint = pot.computeDewPoint(metRH0[zone], metTa0[zone]);
 //	        		double dayOfYear=doy;
-//	        		double meridian = 120;
-//	        		double elevation = 18.5;	        		
-////	        		double sunangle = 17.0;
-//	        		double sunangle = SunCalc4JavaUtils.getAzimuth(hour, doy, lat, lon);
-//	        		double windSpeedHeight = 2.;
-//	        		double[] potentialEPT = pot.et_calc(radiation, airTemp, windSpeed, dewPoint, dayOfYear, hour,
-//	       	    		  lat, lon, meridian, elevation, sunangle, windSpeedHeight);
-//	        		double potValue = potentialEPT[0];
+//	        		double sunangle = pot.getSunangle(lat,doy);
 //	        		
-//	        		System.out.println("etovalue="+etoValue + " potValue" + potValue);
-	       	       
-	       	   	TreeMap<String,Double> Soil = (TreeMap<String, Double>) SimpelConstants.Soil.clone();
-	    	   	Soil.put("Timestep",1.);
-	    	   	Soil.put("Field Capacity %",20.);
-	    	   	Soil.put("Permanent Wilting Point %",5.0);
-	    		Soil.put("Start of Reduction %",12.);
-	    		Soil.put("Root Depth",25.);
-	    		Soil.put("Init-Value Soil %",20.);
-	    		Soil.put("Land use",SimpelConstants.landuse_spruce+0.0);
-	    		Soil.put("Minimum LAI",5.);
-	    		Soil.put("Maximum LAI",5.);
-	    		Soil.put("Vegetation Fraction",0.75);
-	    		Soil.put("Layer Thickness",0.35);
-	    		Soil.put("Drainage Coeff. b",3.7);
-	    		Soil.put("Max. Drainage Rate",2.88);
-	    		Soil.put("Cap. Litter",0.);
-	    		Soil.put("Init-Value Litter",0.);
-	    		Soil.put("Litter Reduction factor",3.);
-	    		Soil.put("Direct runoff factor",46.5);		
-	    		Soil.put("Glugla coeff.",100.);
-	        		
-	        		double[][] simpelReturnValues = simpel.SIMPLE_function(simpelMetInput, SimpelConstants.Landuse, SimpelConstants.LAI_model, 
-	        				Soil, simpelPreviousTimestepValues, etoValue);    	
+//	       		 	double[] potReturnValues = pot.et_calc(radiation, airTemp, windSpeed, dewPoint, dayOfYear, hour, lat, lon, meridian, elevation, sunangle, windSpeedHeight);
+//	       		 	double etoValue = potReturnValues[0];
+//	       	       if (etoValue < 0)
+//	       	       {
+//	       	    	   etoValue = 0;
+//	       	       }
+//
+////	        		ETo eto = new ETo();
+////	        		POT pot = new POT();
+//////	        		Time frequency string of the input and output. The minimum frequency is hours (H) and the maximum is month (M).
+////	        		int freq=ETo.HOURLY;
+//////	        		The latitude of the met station (dec deg) 
+////	        		double lat=-37.5;
+//////	        		The longitude of the met station (dec deg) (only needed if calculating ETo hourly)
+////	        		double lon=145;
+//////	        		The longitude of the center of the time zone (dec deg) (only needed if calculating ETo hourly).
+////	        		double TZ_lon=145;
+//////	        		Elevation of the met station above mean sea level (m) 
+////	        		double z_msl=500;
+//////	        		The height of the wind speed measurement (m). Default is 2 m.
+////	        		double z_u=2;
+//////	        		Wind speed at height z (m/s), set to NaN to calculate
+////	        		double U_z=Double.NaN;
+//////	        		Albedo. Should be 0.23 for the reference crop.
+////	        		double alb = 0.23;
+////	        		
+////	        		double esat = eto.esat(metTa0[zone]);
+////	        		double ea= metRH0[zone]/ 100.0 * esat;
+////	        		boolean daytime = true;
+////	        		if (metKd0[zone] < 50)
+////	        		{
+////	        			daytime = false;
+////	        		}
+////	        		double R_s_hourly = metKd0[zone] * 0.0036; // convert from w/m2 to MJ/m2
+////	        		double etoValue = eto.eto_fao_hourly(freq, lat, doy, lon, TZ_lon, z_msl, ea, R_s_hourly, metTa0[zone], z_u, U_z, alb, hour, daytime);
+////	        		
+////	        		double radiation=metKd0[zone];
+////	        		double airTemp=metTa0[zone];
+////	        		double windSpeed=metWS0[zone];
+////	        		double dewPoint = pot.computeDewPoint(metRH0[zone], metTa0[zone]);
+////	        		double dayOfYear=doy;
+////	        		double meridian = 120;
+////	        		double elevation = 18.5;	        		
+//////	        		double sunangle = 17.0;
+////	        		double sunangle = SunCalc4JavaUtils.getAzimuth(hour, doy, lat, lon);
+////	        		double windSpeedHeight = 2.;
+////	        		double[] potentialEPT = pot.et_calc(radiation, airTemp, windSpeed, dewPoint, dayOfYear, hour,
+////	       	    		  lat, lon, meridian, elevation, sunangle, windSpeedHeight);
+////	        		double potValue = potentialEPT[0];
+////	        		
+////	        		System.out.println("etovalue="+etoValue + " potValue" + potValue);
+//	       	       
+//	       	   	TreeMap<String,Double> Soil = (TreeMap<String, Double>) SimpelConstants.Soil.clone();
+//	    	   	Soil.put("Timestep",1.);
+//	    	   	Soil.put("Field Capacity %",20.);
+//	    	   	Soil.put("Permanent Wilting Point %",5.0);
+//	    		Soil.put("Start of Reduction %",12.);
+//	    		Soil.put("Root Depth",25.);
+//	    		Soil.put("Init-Value Soil %",20.);
+//	    		Soil.put("Land use",SimpelConstants.landuse_spruce+0.0);
+//	    		Soil.put("Minimum LAI",5.);
+//	    		Soil.put("Maximum LAI",5.);
+//	    		Soil.put("Vegetation Fraction",0.75);
+//	    		Soil.put("Layer Thickness",0.35);
+//	    		Soil.put("Drainage Coeff. b",3.7);
+//	    		Soil.put("Max. Drainage Rate",2.88);
+//	    		Soil.put("Cap. Litter",0.);
+//	    		Soil.put("Init-Value Litter",0.);
+//	    		Soil.put("Litter Reduction factor",3.);
+//	    		Soil.put("Direct runoff factor",46.5);		
+//	    		Soil.put("Glugla coeff.",100.);
+//	        		
 //	        		double[][] simpelReturnValues = simpel.SIMPLE_function(simpelMetInput, SimpelConstants.Landuse, SimpelConstants.LAI_model, 
-//	        				SimpelConstants.Soil, simpelPreviousTimestepValues);    	
-	        		simpelPreviousTimestepValues = simpel.setPreviousValues(simpelReturnValues);
-	        		
-	        		double water_balance = simpelReturnValues[0][SimpelConstants.WATER_BALANCE];
-	        		double sum_prec = simpelReturnValues[0][SimpelConstants.SUM_PREC];
-	        		double sum_etr = simpelReturnValues[0][SimpelConstants.SUM_ETR];
-	        		double sum_runoff = simpelReturnValues[0][SimpelConstants.SUM_RUNOFF];
-	        		double init_swe = simpelReturnValues[0][SimpelConstants.INIT_SWE];
-	        		double init_stor = simpelReturnValues[0][SimpelConstants.INIT_STOR];
-	        		double snow_water_equi = simpelReturnValues[0][SimpelConstants.SNOW_WATER_EQUI];   		  
-	        		double i_bal = simpelReturnValues[0][SimpelConstants.I_BAL];   	
-	        		double content = simpelReturnValues[0][SimpelConstants.CONTENT];   	
-	        		double precipitation = simpelReturnValues[0][SimpelConstants.PRECIPITATION];
-	        		double seepage = simpelReturnValues[0][SimpelConstants.SEEPAGE];
-	        		double surface_runoff = simpelReturnValues[0][SimpelConstants.SURFACE_RUNOFF];
-	        		double balance_soil = simpelReturnValues[0][SimpelConstants.BALANCE_SOIL];
-	        		double et_balance = simpelReturnValues[0][SimpelConstants.ET_BALANCE];
-	        		
-	        		double simpelETA = simpelReturnValues[0][SimpelConstants.ETA_TOTAL];
-	        		double storage = simpelReturnValues[0][SimpelConstants.STORAGE];
-	        		double simpelQe = simpel.qeFromETA2(simpelETA);
-//	        		String output = "ETA " + common.roundToDecimals(simpelETA,4 ) 
-//    				+ "\tQe " + common.roundToDecimals(simpelQe,4) 
-//    				+ "\tETO " + common.roundToDecimals(etoValue,4)
-//    				+ "\tETOQe " + common.roundToDecimals(simpel.qeFromETA2(etoValue),2)
-//    				+ "\tstorage " + common.roundToDecimals(storage,2)
-//    				+ "\tKdown " + metKd0[zone];
-//	        		System.out.println(
-//	        				output
-//	        				
-//	        				) ;
-	        		 
-	        		double i_litter = simpelReturnValues[0][SimpelConstants.I_LITTER];
-	        		double i_leaf = simpelReturnValues[0][SimpelConstants.I_LEAF];
-	        		double eta = simpelReturnValues[0][SimpelConstants.ETA];
-
-	        		String output2 =  i 
-	        				+ "\t" +	common.roundToDecimals(simpelETA,4 ) 
-    				+ "\t" + common.roundToDecimals(simpelQe,4) 
-    				+ "\t" + common.roundToDecimals(etoValue,4)
-    				+ "\t" + common.roundToDecimals(simpel.qeFromETA2(etoValue),2)
-    				+ "\t" + common.roundToDecimals(storage,2)
-    				+ "\t" + metKd0[zone]
-    						+ "\t" +water_balance	
-    						+ "\t" +sum_prec
-    						+ "\t" +sum_etr
-    						+ "\t" +sum_runoff
-    						+ "\t" +init_swe
-    						+ "\t" +init_stor
-    						+ "\t" +i_bal
-    						+ "\t" +content
-    						+ "\t" + precipitation
-    						+ "\t" + seepage
-    						+ "\t" + surface_runoff
-    						+ "\t" + i_litter
-    						+ "\t" + i_leaf
-    						+ "\t" + eta
-    						+ "\t" + balance_soil
-    						+ "\t" + et_balance
-    						;
-	        		System.out.println(output2);
-	        		common.appendFile(output2,"/tmp/output.csv");
-	        		//TODO 
-//	        		simpelQe = Double.NaN;
-//	        		simpelQe=0;
-	        		
-//	        		System.out.println("Qe="+simpelQe);
-	        		
-	        		// end Simpel	
-//	        		System.exit(1);
-	                
+//	        				Soil, simpelPreviousTimestepValues, etoValue);    	
+////	        		double[][] simpelReturnValues = simpel.SIMPLE_function(simpelMetInput, SimpelConstants.Landuse, SimpelConstants.LAI_model, 
+////	        				SimpelConstants.Soil, simpelPreviousTimestepValues);    	
+//	        		simpelPreviousTimestepValues = simpel.setPreviousValues(simpelReturnValues);
+//	        		
+//	        		double water_balance = simpelReturnValues[0][SimpelConstants.WATER_BALANCE];
+//	        		double sum_prec = simpelReturnValues[0][SimpelConstants.SUM_PREC];
+//	        		double sum_etr = simpelReturnValues[0][SimpelConstants.SUM_ETR];
+//	        		double sum_runoff = simpelReturnValues[0][SimpelConstants.SUM_RUNOFF];
+//	        		double init_swe = simpelReturnValues[0][SimpelConstants.INIT_SWE];
+//	        		double init_stor = simpelReturnValues[0][SimpelConstants.INIT_STOR];
+//	        		double snow_water_equi = simpelReturnValues[0][SimpelConstants.SNOW_WATER_EQUI];   		  
+//	        		double i_bal = simpelReturnValues[0][SimpelConstants.I_BAL];   	
+//	        		double content = simpelReturnValues[0][SimpelConstants.CONTENT];   	
+//	        		double precipitation = simpelReturnValues[0][SimpelConstants.PRECIPITATION];
+//	        		double seepage = simpelReturnValues[0][SimpelConstants.SEEPAGE];
+//	        		double surface_runoff = simpelReturnValues[0][SimpelConstants.SURFACE_RUNOFF];
+//	        		double balance_soil = simpelReturnValues[0][SimpelConstants.BALANCE_SOIL];
+//	        		double et_balance = simpelReturnValues[0][SimpelConstants.ET_BALANCE];
+//	        		
+//	        		double simpelETA = simpelReturnValues[0][SimpelConstants.ETA_TOTAL];
+//	        		double storage = simpelReturnValues[0][SimpelConstants.STORAGE];
+//	        		double simpelQe = simpel.qeFromETA2(simpelETA);
+////	        		String output = "ETA " + common.roundToDecimals(simpelETA,4 ) 
+////    				+ "\tQe " + common.roundToDecimals(simpelQe,4) 
+////    				+ "\tETO " + common.roundToDecimals(etoValue,4)
+////    				+ "\tETOQe " + common.roundToDecimals(simpel.qeFromETA2(etoValue),2)
+////    				+ "\tstorage " + common.roundToDecimals(storage,2)
+////    				+ "\tKdown " + metKd0[zone];
+////	        		System.out.println(
+////	        				output
+////	        				
+////	        				) ;
+//	        		 
+//	        		double i_litter = simpelReturnValues[0][SimpelConstants.I_LITTER];
+//	        		double i_leaf = simpelReturnValues[0][SimpelConstants.I_LEAF];
+//	        		double eta = simpelReturnValues[0][SimpelConstants.ETA];
+//
+//	        		String output2 =  i 
+//	        				+ "\t" +	common.roundToDecimals(simpelETA,4 ) 
+//    				+ "\t" + common.roundToDecimals(simpelQe,4) 
+//    				+ "\t" + common.roundToDecimals(etoValue,4)
+//    				+ "\t" + common.roundToDecimals(simpel.qeFromETA2(etoValue),2)
+//    				+ "\t" + common.roundToDecimals(storage,2)
+//    				+ "\t" + metKd0[zone]
+//    						+ "\t" +water_balance	
+//    						+ "\t" +sum_prec
+//    						+ "\t" +sum_etr
+//    						+ "\t" +sum_runoff
+//    						+ "\t" +init_swe
+//    						+ "\t" +init_stor
+//    						+ "\t" +i_bal
+//    						+ "\t" +content
+//    						+ "\t" + precipitation
+//    						+ "\t" + seepage
+//    						+ "\t" + surface_runoff
+//    						+ "\t" + i_litter
+//    						+ "\t" + i_leaf
+//    						+ "\t" + eta
+//    						+ "\t" + balance_soil
+//    						+ "\t" + et_balance
+//    						;
+//	        		System.out.println(output2);
+//	        		common.appendFile(output2,"/tmp/output.csv");
+//	        		//TODO 
+////	        		simpelQe = Double.NaN;
+////	        		simpelQe=0;
+//	        		
+////	        		System.out.println("Qe="+simpelQe);
+//	        		
+//	        		// end Simpel	
+////	        		System.exit(1);
+//	                
+	            	// will run the next SIMPEL timestep (store the state in the object) and return the Qe
+	            	double simpelQe = irrigatedGrassSimpelSurface.runTimestep(metTa0[zone], metRH0[zone], metKd0[zone], metWS0[zone], dte, irrigationTime, irrigationAmount, i);
 
 	                //############ Met variables for each time step (generate dataframe) ##########
 
